@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { type OSRSMonster, type OSRSDrop } from "@/lib/osrs-api";
+import { type OSRSMonster, type OSRSDrop, getMonsterDetails } from "@/lib/osrs-api";
 
 interface SimulationResult {
   itemName: string;
@@ -31,17 +31,42 @@ function SimulateContent() {
   const [isSimulating, setIsSimulating] = useState(false);
 
   useEffect(() => {
-    const monsterParam = searchParams.get('monster');
-    if (monsterParam) {
+    const monsterName = searchParams.get('name');
+    if (monsterName) {
       try {
-        const decodedMonster = JSON.parse(decodeURIComponent(monsterParam));
-        setMonster({
-          ...decodedMonster,
-          url: `https://oldschool.runescape.wiki/w/${encodeURIComponent(decodedMonster.title.replace(/ /g, '_'))}`,
-          extract: ''
-        });
+        // Try to get monster data from sessionStorage first
+        const storedMonster = sessionStorage.getItem('simulationMonster');
+        if (storedMonster) {
+          const parsedMonster = JSON.parse(storedMonster);
+          if (parsedMonster.title === decodeURIComponent(monsterName)) {
+            setMonster({
+              ...parsedMonster,
+              url: `https://oldschool.runescape.wiki/w/${encodeURIComponent(parsedMonster.title.replace(/ /g, '_'))}`,
+              extract: ''
+            });
+            return;
+          }
+        }
+        
+        // If no stored data or mismatch, try to fetch from API as fallback
+        console.log('No stored monster data, attempting to fetch from API...');
+        const fetchMonsterData = async () => {
+          try {
+            const monsterData = await getMonsterDetails(decodeURIComponent(monsterName));
+            if (monsterData && monsterData.drops.length > 0) {
+              setMonster(monsterData);
+            } else {
+              console.error('Failed to fetch monster data or no drops found');
+              router.push('/');
+            }
+          } catch (error) {
+            console.error('Error fetching monster data:', error);
+            router.push('/');
+          }
+        };
+        fetchMonsterData();
       } catch (error) {
-        console.error('Error parsing monster data:', error);
+        console.error('Error loading monster data:', error);
         router.push('/');
       }
     } else {

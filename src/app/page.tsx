@@ -1,103 +1,165 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { searchItems, type OSRSMonster, type OSRSDrop } from "@/lib/osrs-api";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<OSRSMonster[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await searchItems(searchQuery);
+      setSearchResults(response.results);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Search failed");
+      setSearchResults([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
+  return (
+    <div className="min-h-screen p-8 max-w-4xl mx-auto">
+      <header className="text-center mb-12">
+        <h1 className="text-4xl font-bold mb-4">LootSim</h1>
+        <p className="text-lg text-muted-foreground">
+          Search and explore Old School RuneScape items
+        </p>
+      </header>
+
+      <main className="space-y-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Monster Drop Search</CardTitle>
+            <CardDescription>
+              Search for monsters and view their drop tables with rates
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
+              <Input
+                placeholder="Search for monsters (e.g., 'cow', 'goblin', 'giant')..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="flex-1"
+              />
+              <Button onClick={handleSearch} disabled={isLoading}>
+                {isLoading ? "Searching..." : "Search"}
+              </Button>
+            </div>
+            {error && (
+              <p className="text-red-500 text-sm mt-2">{error}</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {searchResults.length > 0 && (
+          <div className="space-y-6">
+            {searchResults.map((monster, index) => (
+              <Card key={index}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-xl">{monster.title}</CardTitle>
+                      <CardDescription className="mt-2">
+                        {monster.combatLevel && `Combat Level: ${monster.combatLevel}`}
+                        {monster.combatLevel && monster.hitpoints && ' • '}
+                        {monster.hitpoints && `Hitpoints: ${monster.hitpoints}`}
+                      </CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <a
+                        href={monster.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View on Wiki →
+                      </a>
+                    </Button>
+                  </div>
+                  {monster.extract && (
+                    <p className="text-sm text-muted-foreground mt-3">
+                      {monster.extract.length > 200 
+                        ? `${monster.extract.substring(0, 200)}...` 
+                        : monster.extract
+                      }
+                    </p>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <h4 className="font-semibold mb-4">Drop Table ({monster.drops.length} items)</h4>
+                  
+                  {/* Group drops by category */}
+                  {Object.entries(
+                    monster.drops.reduce((acc, drop) => {
+                      if (!acc[drop.category]) acc[drop.category] = [];
+                      acc[drop.category].push(drop);
+                      return acc;
+                    }, {} as Record<string, OSRSDrop[]>)
+                  ).map(([category, drops]) => (
+                    <div key={category} className="mb-6">
+                      <h5 className="font-medium text-sm text-muted-foreground mb-3 uppercase tracking-wide">
+                        {category}
+                      </h5>
+                      <div className="grid gap-2">
+                        {drops.map((drop, dropIndex) => (
+                          <div
+                            key={dropIndex}
+                            className="flex justify-between items-center p-3 border rounded-lg bg-muted/20"
+                          >
+                            <div className="flex-1">
+                              <span className="font-medium">{drop.name}</span>
+                              {drop.quantity !== '1' && (
+                                <span className="text-sm text-muted-foreground ml-2">
+                                  (×{drop.quantity})
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-sm font-mono bg-background px-2 py-1 rounded border">
+                              {drop.rarity}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {searchResults.length === 0 && searchQuery && !isLoading && !error && (
+          <Card>
+            <CardContent className="text-center py-8">
+              <p className="text-muted-foreground">
+                No monsters found with drop data for &quot;{searchQuery}&quot;
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Try searching for monster names like cow, goblin, or giant
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }

@@ -1,0 +1,16 @@
+{
+  "name": "OSRS Loot Sim",
+  "short_name": "OSRS Loot Sim",
+  "description": "Search Old School RuneScape monsters and simulate their drop tables",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8B4513",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

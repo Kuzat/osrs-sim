@@ -1,0 +1,21 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Treasure chest base -->
+  <rect x="4" y="14" width="24" height="14" rx="2" fill="#8B4513" stroke="#654321" stroke-width="1"/>
+  
+  <!-- Chest lid -->
+  <path d="M4 16 L28 16 Q28 12 24 12 L8 12 Q4 12 4 16 Z" fill="#A0522D" stroke="#654321" stroke-width="1"/>
+  
+  <!-- Chest lock -->
+  <rect x="14" y="18" width="4" height="6" rx="1" fill="#FFD700" stroke="#DAA520" stroke-width="0.5"/>
+  <circle cx="16" cy="20" r="1.5" fill="#DAA520"/>
+  
+  <!-- Coins/gems -->
+  <circle cx="10" cy="22" r="2" fill="#FFD700" stroke="#DAA520" stroke-width="0.5"/>
+  <circle cx="22" cy="23" r="1.5" fill="#FF6B6B" stroke="#E55555" stroke-width="0.5"/>
+  <circle cx="18" cy="26" r="1" fill="#4ECDC4" stroke="#45B7AA" stroke-width="0.5"/>
+  
+  <!-- Sparkles -->
+  <circle cx="8" cy="8" r="1" fill="#FFD700"/>
+  <circle cx="24" cy="6" r="0.8" fill="#FFFFFF"/>
+  <circle cx="26" cy="10" r="0.6" fill="#FFD700"/>
+</svg>

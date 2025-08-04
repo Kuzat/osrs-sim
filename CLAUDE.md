@@ -132,10 +132,14 @@ Good test cases for development:
 - `dragon` - Should show multiple dragon-type monsters
 
 ## Simulation Features
-- **Drop Rate Parser**: Converts wiki drop rates (1/128, Always, etc.) to probabilities
-- **Kill Simulator**: Simulates individual monster kills with RNG
+- **Accurate OSRS Drop Mechanics**: 
+  - Always drops (bones) - guaranteed every kill
+  - Main drop table - exactly one item per kill using weighted selection
+  - Tertiary drops - independent rolls (clue scrolls, rare items)
+- **Drop Rate Parser**: Converts wiki drop rates (1/128, Always, etc.) to proper weights
+- **Kill Simulator**: Simulates realistic monster kills following OSRS mechanics
 - **Statistical Analysis**: Tracks total items, unique drops, and success rates
-- **Results Display**: Shows actual vs expected drop rates
+- **Results Display**: Shows actual vs expected drop rates with proper distribution
 - **Performance**: Can handle up to 100,000 simulated kills efficiently
 
 ## Future Enhancements

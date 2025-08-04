@@ -106,8 +106,88 @@ function SimulateContent() {
     setTimeout(() => {
       const results: { [key: string]: SimulationResult } = {};
       
+      // Group drops by type
+      const alwaysDrops = monster.drops.filter(drop => 
+        drop.rarity.toLowerCase() === 'always' || drop.category === '100%'
+      );
+      const tertiaryDrops = monster.drops.filter(drop => 
+        drop.category.toLowerCase() === 'tertiary'
+      );
+      const mainTableDrops = monster.drops.filter(drop => 
+        drop.rarity.toLowerCase() !== 'always' && 
+        drop.category !== '100%' && 
+        drop.category.toLowerCase() !== 'tertiary'
+      );
+      
+      // Calculate weights for main drop table based on wiki drop rates
+      const mainTableWeights = mainTableDrops.map(drop => {
+        // Parse the actual weight from fraction format (e.g., "3/128" -> weight = 3)
+        const fractionMatch = drop.rarity.match(/(\d+)\/(\d+)/);
+        if (fractionMatch) {
+          return { drop, weight: parseInt(fractionMatch[1]) };
+        }
+        
+        // Handle percentage format
+        const percentMatch = drop.rarity.match(/(\d+(?:\.\d+)?)%/);
+        if (percentMatch) {
+          const percent = parseFloat(percentMatch[1]);
+          return { drop, weight: Math.round(percent * 1.28) }; // Convert to ~128 scale
+        }
+        
+        // Default weight for unknown formats
+        return { drop, weight: 1 };
+      });
+      
+      const totalMainWeight = mainTableWeights.reduce((sum, item) => sum + item.weight, 0);
+      
       for (let kill = 0; kill < killCount; kill++) {
-        monster.drops.forEach((drop) => {
+        // 1. Always drops (bones, guaranteed items)
+        alwaysDrops.forEach((drop) => {
+          const key = `${drop.name}-${drop.category}`;
+          if (!results[key]) {
+            results[key] = {
+              itemName: drop.name,
+              quantity: 0,
+              timesDropped: 0,
+              category: drop.category,
+              rarity: drop.rarity
+            };
+          }
+          
+          const quantityToAdd = parseInt(drop.quantity.replace(/[^\d]/g, '')) || 1;
+          results[key].quantity += quantityToAdd;
+          results[key].timesDropped += 1;
+        });
+        
+        // 2. Main drop table (exactly one item per kill)
+        if (mainTableWeights.length > 0 && totalMainWeight > 0) {
+          const random = Math.random() * totalMainWeight;
+          let currentWeight = 0;
+          
+          for (const { drop, weight } of mainTableWeights) {
+            currentWeight += weight;
+            if (random <= currentWeight) {
+              const key = `${drop.name}-${drop.category}`;
+              if (!results[key]) {
+                results[key] = {
+                  itemName: drop.name,
+                  quantity: 0,
+                  timesDropped: 0,
+                  category: drop.category,
+                  rarity: drop.rarity
+                };
+              }
+              
+              const quantityToAdd = parseInt(drop.quantity.replace(/[^\d]/g, '')) || 1;
+              results[key].quantity += quantityToAdd;
+              results[key].timesDropped += 1;
+              break;
+            }
+          }
+        }
+        
+        // 3. Tertiary drops (independent rolls)
+        tertiaryDrops.forEach((drop) => {
           const dropRate = parseDropRate(drop.rarity);
           const random = Math.random();
           

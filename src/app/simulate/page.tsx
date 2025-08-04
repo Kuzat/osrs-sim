@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ItemIcon } from "@/components/ui/item-icon";
+import { Tooltip } from "@/components/ui/tooltip";
 import { type OSRSMonster, type OSRSDrop, getMonsterDetails } from "@/lib/osrs-api";
 
 interface SimulationResult {
@@ -31,6 +32,7 @@ function SimulateContent() {
   const [killCount, setKillCount] = useState(1000);
   const [simulationResults, setSimulationResults] = useState<SimulationStats | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   useEffect(() => {
     const monsterName = searchParams.get('name');
@@ -383,41 +385,95 @@ function SimulateContent() {
       {simulationResults && (
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>Simulation Results</CardTitle>
-            <CardDescription>
-              Items obtained from {simulationResults.totalKills.toLocaleString()} simulated kills
-            </CardDescription>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>Simulation Results</CardTitle>
+                <CardDescription>
+                  Items obtained from {simulationResults.totalKills.toLocaleString()} simulated kills
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                >
+                  List
+                </Button>
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                >
+                  Grid
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {simulationResults.results.length > 0 ? (
-              <div className="space-y-2">
-                {simulationResults.results.map((result, index) => (
-                  <div
-                    key={index}
-                    className="flex justify-between items-center p-3 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      <ItemIcon 
-                        src={result.imageUrl} 
-                        alt={result.itemName}
-                        size="md"
-                      />
-                      <div>
-                        <div className="font-medium">{result.itemName}</div>
+              viewMode === 'list' ? (
+                <div className="space-y-2">
+                  {simulationResults.results.map((result, index) => (
+                    <div
+                      key={index}
+                      className="flex justify-between items-center p-3 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        <ItemIcon 
+                          src={result.imageUrl} 
+                          alt={result.itemName}
+                          size="md"
+                        />
+                        <div>
+                          <div className="font-medium">{result.itemName}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {result.category} • Expected rate: {result.rarity}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono text-lg">×{result.quantity.toLocaleString()}</div>
                         <div className="text-sm text-muted-foreground">
-                          {result.category} • Expected rate: {result.rarity}
+                          {result.timesDropped} drops ({((result.timesDropped / simulationResults.totalKills) * 100).toFixed(2)}%)
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-mono text-lg">×{result.quantity.toLocaleString()}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {result.timesDropped} drops ({((result.timesDropped / simulationResults.totalKills) * 100).toFixed(2)}%)
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2">
+                  {simulationResults.results.map((result, index) => (
+                    <Tooltip
+                      key={index}
+                      content={
+                        <div className="text-center">
+                          <div className="font-medium">{result.itemName}</div>
+                          <div className="text-sm opacity-90">×{result.quantity.toLocaleString()}</div>
+                          <div className="text-xs opacity-75">
+                            {result.timesDropped} drops ({((result.timesDropped / simulationResults.totalKills) * 100).toFixed(2)}%)
+                          </div>
+                          <div className="text-xs opacity-75 mt-1">
+                            {result.category} • {result.rarity}
+                          </div>
+                        </div>
+                      }
+                    >
+                      <div className="relative p-2 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <ItemIcon 
+                          src={result.imageUrl} 
+                          alt={result.itemName}
+                          size="lg"
+                          className="mx-auto"
+                        />
+                        <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs font-mono px-1 rounded-sm min-w-[20px] text-center">
+                          {result.quantity > 999 ? `${Math.floor(result.quantity / 1000)}k` : result.quantity}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    </Tooltip>
+                  ))}
+                </div>
+              )
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <p>No items were dropped in this simulation.</p>

@@ -176,3 +176,4 @@ Key packages and their purposes:
 - Commit format: Descriptive messages with feature summaries
 - All changes should build successfully before committing
 - Use TypeScript strict mode and fix all warnings
+- **Always commit changes to git when working on new features or fixes**

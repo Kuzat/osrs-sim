@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ItemIcon } from "@/components/ui/item-icon";
 import { type OSRSMonster, type OSRSDrop, getMonsterDetails } from "@/lib/osrs-api";
 
 interface SimulationResult {
@@ -13,6 +14,7 @@ interface SimulationResult {
   timesDropped: number;
   category: string;
   rarity: string;
+  imageUrl?: string;
 }
 
 interface SimulationStats {
@@ -150,7 +152,8 @@ function SimulateContent() {
               quantity: 0,
               timesDropped: 0,
               category: drop.category,
-              rarity: drop.rarity
+              rarity: drop.rarity,
+              imageUrl: drop.imageUrl
             };
           }
           
@@ -174,7 +177,8 @@ function SimulateContent() {
                   quantity: 0,
                   timesDropped: 0,
                   category: drop.category,
-                  rarity: drop.rarity
+                  rarity: drop.rarity,
+                  imageUrl: drop.imageUrl
                 };
               }
               
@@ -199,7 +203,8 @@ function SimulateContent() {
                 quantity: 0,
                 timesDropped: 0,
                 category: drop.category,
-                rarity: drop.rarity
+                rarity: drop.rarity,
+                imageUrl: drop.imageUrl
               };
             }
             
@@ -246,7 +251,19 @@ function SimulateContent() {
         
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-2">Loot Simulator</h1>
-          <h2 className="text-2xl text-muted-foreground">{monster.title}</h2>
+          <div className="flex items-center justify-center gap-4 mb-2">
+            {monster.image && (
+              <img
+                src={monster.image}
+                alt={monster.title}
+                className="w-16 h-16 rounded-lg object-cover border bg-muted/20"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            )}
+            <h2 className="text-2xl text-muted-foreground">{monster.title}</h2>
+          </div>
           {monster.combatLevel && (
             <p className="text-sm text-muted-foreground mt-2">
               Combat Level: {monster.combatLevel}
@@ -343,8 +360,15 @@ function SimulateContent() {
                 </h5>
                 <div className="space-y-1">
                   {drops.map((drop, dropIndex) => (
-                    <div key={dropIndex} className="flex justify-between text-sm">
-                      <span>{drop.name} (×{drop.quantity})</span>
+                    <div key={dropIndex} className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2">
+                        <ItemIcon 
+                          src={drop.imageUrl} 
+                          alt={drop.name}
+                          size="sm"
+                        />
+                        <span>{drop.name} (×{drop.quantity})</span>
+                      </div>
                       <span className="font-mono text-muted-foreground">{drop.rarity}</span>
                     </div>
                   ))}
@@ -372,10 +396,17 @@ function SimulateContent() {
                     key={index}
                     className="flex justify-between items-center p-3 border rounded-lg"
                   >
-                    <div className="flex-1">
-                      <div className="font-medium">{result.itemName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {result.category} • Expected rate: {result.rarity}
+                    <div className="flex items-center gap-3 flex-1">
+                      <ItemIcon 
+                        src={result.imageUrl} 
+                        alt={result.itemName}
+                        size="md"
+                      />
+                      <div>
+                        <div className="font-medium">{result.itemName}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {result.category} • Expected rate: {result.rarity}
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">

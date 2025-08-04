@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Autocomplete } from "@/components/ui/autocomplete";
+import { ItemIcon } from "@/components/ui/item-icon";
 import { searchItems, searchMonsterNames, type OSRSMonster, type OSRSDrop } from "@/lib/osrs-api";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -118,13 +119,27 @@ export default function Home() {
               <Card key={index}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-xl">{monster.title}</CardTitle>
-                      <CardDescription className="mt-2">
-                        {monster.combatLevel && `Combat Level: ${monster.combatLevel}`}
-                        {monster.combatLevel && monster.hitpoints && ' • '}
-                        {monster.hitpoints && `Hitpoints: ${monster.hitpoints}`}
-                      </CardDescription>
+                    <div className="flex items-start gap-4">
+                      {monster.image && (
+                        <div className="flex-shrink-0">
+                          <img
+                            src={monster.image}
+                            alt={monster.title}
+                            className="w-16 h-16 rounded-lg object-cover border bg-muted/20"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <CardTitle className="text-xl">{monster.title}</CardTitle>
+                        <CardDescription className="mt-2">
+                          {monster.combatLevel && `Combat Level: ${monster.combatLevel}`}
+                          {monster.combatLevel && monster.hitpoints && ' • '}
+                          {monster.hitpoints && `Hitpoints: ${monster.hitpoints}`}
+                        </CardDescription>
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <Button 
@@ -184,13 +199,20 @@ export default function Home() {
                             key={dropIndex}
                             className="flex justify-between items-center p-3 border rounded-lg bg-muted/20"
                           >
-                            <div className="flex-1">
-                              <span className="font-medium">{drop.name}</span>
-                              {drop.quantity !== '1' && (
-                                <span className="text-sm text-muted-foreground ml-2">
-                                  (×{drop.quantity})
-                                </span>
-                              )}
+                            <div className="flex items-center gap-3 flex-1">
+                              <ItemIcon 
+                                src={drop.imageUrl} 
+                                alt={drop.name}
+                                size="md"
+                              />
+                              <div>
+                                <span className="font-medium">{drop.name}</span>
+                                {drop.quantity !== '1' && (
+                                  <span className="text-sm text-muted-foreground ml-2">
+                                    (×{drop.quantity})
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <div className="text-sm font-mono bg-background px-2 py-1 rounded border">
                               {drop.rarity}

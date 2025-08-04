@@ -10,6 +10,7 @@ export interface OSRSDrop {
   quantity: string;
   rarity: string;
   category: string;
+  imageUrl?: string;
 }
 
 export interface OSRSMonster {
@@ -183,6 +184,22 @@ export async function getMonsterDetails(title: string): Promise<OSRSMonster | nu
     if (drops.length === 0) {
       return null;
     }
+
+    // Fetch images for all drop items (with error handling)
+    let dropsWithImages = drops;
+    try {
+      const uniqueItemNames = [...new Set(drops.map(drop => drop.name))];
+      const itemImages = await getMultipleItemImages(uniqueItemNames);
+      
+      // Add image URLs to drops
+      dropsWithImages = drops.map(drop => ({
+        ...drop,
+        imageUrl: itemImages[drop.name] || undefined
+      }));
+    } catch (error) {
+      console.warn('Failed to fetch item images, continuing without images:', error);
+      // Continue with original drops without images
+    }
     
     // Extract combat level and hitpoints from wikitext if available
     const combatLevelMatch = wikitext.match(/\|combat\s*=\s*(\d+)/i);
@@ -193,7 +210,7 @@ export async function getMonsterDetails(title: string): Promise<OSRSMonster | nu
       url: `https://oldschool.runescape.wiki/w/${encodeURIComponent(page.title.replace(/ /g, '_'))}`,
       extract: page.extract || '',
       image: page.original?.source || '',
-      drops,
+      drops: dropsWithImages,
       combatLevel: combatLevelMatch ? parseInt(combatLevelMatch[1]) : undefined,
       hitpoints: hitpointsMatch ? parseInt(hitpointsMatch[1]) : undefined
     };
@@ -238,6 +255,89 @@ export async function searchMonsterNames(query: string, limit: number = 10): Pro
   } catch (error) {
     console.error('Error searching monster names:', error);
     return [];
+  }
+}
+
+export async function getItemImage(itemName: string): Promise<string | null> {
+  if (!itemName.trim()) {
+    return null;
+  }
+
+  try {
+    const imageUrl = new URL(OSRS_WIKI_API_BASE);
+    imageUrl.searchParams.set('action', 'query');
+    imageUrl.searchParams.set('titles', itemName);
+    imageUrl.searchParams.set('prop', 'pageimages');
+    imageUrl.searchParams.set('piprop', 'original');
+    imageUrl.searchParams.set('format', 'json');
+    imageUrl.searchParams.set('origin', '*');
+
+    const response = await fetch(imageUrl.toString());
+    
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    const pages = data.query?.pages;
+    
+    if (!pages) {
+      return null;
+    }
+
+    const pageId = Object.keys(pages)[0];
+    const page = pages[pageId];
+    
+    if (pageId === '-1' || !page) {
+      return null;
+    }
+
+    return page.original?.source || null;
+  } catch (error) {
+    console.error('Error fetching item image:', error);
+    return null;
+  }
+}
+
+export async function getMultipleItemImages(itemNames: string[]): Promise<Record<string, string | null>> {
+  if (itemNames.length === 0) {
+    return {};
+  }
+
+  try {
+    const imageUrl = new URL(OSRS_WIKI_API_BASE);
+    imageUrl.searchParams.set('action', 'query');
+    imageUrl.searchParams.set('titles', itemNames.join('|'));
+    imageUrl.searchParams.set('prop', 'pageimages');
+    imageUrl.searchParams.set('piprop', 'original');
+    imageUrl.searchParams.set('format', 'json');
+    imageUrl.searchParams.set('origin', '*');
+
+    const response = await fetch(imageUrl.toString());
+    
+    if (!response.ok) {
+      return {};
+    }
+
+    const data = await response.json();
+    const pages = data.query?.pages;
+    
+    if (!pages) {
+      return {};
+    }
+
+    const results: Record<string, string | null> = {};
+    
+    Object.values(pages as Record<string, { title?: string; original?: { source?: string } }>).forEach((page) => {
+      if (page.title) {
+        results[page.title] = page.original?.source || null;
+      }
+    });
+
+    return results;
+  } catch (error) {
+    console.error('Error fetching multiple item images:', error);
+    return {};
   }
 }
 

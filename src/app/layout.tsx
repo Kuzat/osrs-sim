@@ -13,12 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OSRS Loot Sim",
+  title: "OSRS Monster LootSim",
   description: "Search Old School RuneScape monsters and simulate their drop tables. View detailed loot statistics and probabilities with accurate OSRS drop mechanics.",
   keywords: ["OSRS", "Old School RuneScape", "loot simulator", "drop table", "monster drops", "RuneScape calculator"],
-  authors: [{ name: "OSRS Loot Sim" }],
-  creator: "OSRS Loot Sim",
-  publisher: "OSRS Loot Sim",
+  authors: [{ name: "OSRS Monster LootSim" }],
+  creator: "OSRS Monster LootSim",
+  publisher: "OSRS Monster LootSim",
   formatDetection: {
     email: false,
     address: false,
@@ -29,16 +29,16 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: "OSRS Loot Sim",
+    title: "OSRS Monster LootSim",
     description: "Search Old School RuneScape monsters and simulate their drop tables. View detailed loot statistics and probabilities with accurate OSRS drop mechanics.",
     url: 'https://osrs-loot-sim.vercel.app',
-    siteName: 'OSRS Loot Sim',
+    siteName: 'OSRS Monster LootSim',
     locale: 'en_US',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: "OSRS Loot Sim",
+    title: "OSRS Monster LootSim",
     description: "Search Old School RuneScape monsters and simulate their drop tables. View detailed loot statistics and probabilities.",
     creator: '@osrs_loot_sim',
   },

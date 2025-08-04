@@ -1,6 +1,6 @@
 {
-  "name": "OSRS Loot Sim",
-  "short_name": "OSRS Loot Sim",
+  "name": "OSRS Monster LootSim",
+  "short_name": "OSRS LootSim",
   "description": "Search Old School RuneScape monsters and simulate their drop tables",
   "start_url": "/",
   "display": "standalone",

@@ -252,7 +252,7 @@ function SimulateContent() {
         </Button>
         
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">Loot Simulator</h1>
+          <h1 className="text-4xl font-bold mb-2">OSRS Monster LootSim</h1>
           <div className="flex items-center justify-center gap-4 mb-2">
             {monster.image && (
               <img

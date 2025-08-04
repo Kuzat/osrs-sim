@@ -76,9 +76,9 @@ export default function Home() {
   return (
     <div className="min-h-screen p-8 max-w-4xl mx-auto">
       <header className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-4">LootSim</h1>
+        <h1 className="text-4xl font-bold mb-4">OSRS Monster LootSim</h1>
         <p className="text-lg text-muted-foreground">
-          Search and explore Old School RuneScape items
+          Search and explore Old School RuneScape monster drop tables
         </p>
       </header>
 

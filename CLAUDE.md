@@ -1,7 +1,7 @@
-# LootSim - OSRS Monster Drop Table Explorer
+# OSRS Monster LootSim - Monster Drop Table Explorer
 
 ## Project Overview
-LootSim is a Next.js application that integrates with the Old School RuneScape Wiki API to search for monsters and display their complete drop tables with rates. Users can search for any monster and view organized drop information including rarities, quantities, and categories.
+OSRS Monster LootSim is a Next.js application that integrates with the Old School RuneScape Wiki API to search for monsters and display their complete drop tables with rates. Users can search for any monster and view organized drop information including rarities, quantities, and categories.
 
 ## Tech Stack
 - **Framework**: Next.js 15 with TypeScript

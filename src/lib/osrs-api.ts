@@ -208,6 +208,39 @@ export async function searchItems(query: string, limit: number = 10): Promise<OS
   return searchMonsters(query, limit);
 }
 
+export async function searchMonsterNames(query: string, limit: number = 10): Promise<string[]> {
+  if (!query.trim()) {
+    return [];
+  }
+
+  try {
+    const searchUrl = new URL(OSRS_WIKI_API_BASE);
+    searchUrl.searchParams.set('action', 'opensearch');
+    searchUrl.searchParams.set('search', query);
+    searchUrl.searchParams.set('limit', limit.toString());
+    searchUrl.searchParams.set('format', 'json');
+    searchUrl.searchParams.set('origin', '*');
+
+    const response = await fetch(searchUrl.toString());
+    
+    if (!response.ok) {
+      throw new Error(`Search failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    if (!Array.isArray(data) || data.length < 2) {
+      return [];
+    }
+
+    const [, titles] = data;
+    return Array.isArray(titles) ? titles : [];
+  } catch (error) {
+    console.error('Error searching monster names:', error);
+    return [];
+  }
+}
+
 export async function getItemDetails(title: string): Promise<OSRSItem | null> {
   try {
     const detailsUrl = new URL(OSRS_WIKI_API_BASE);

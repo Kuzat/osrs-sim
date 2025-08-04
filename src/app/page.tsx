@@ -1,22 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { searchItems, type OSRSMonster, type OSRSDrop } from "@/lib/osrs-api";
+import { Autocomplete } from "@/components/ui/autocomplete";
+import { searchItems, searchMonsterNames, type OSRSMonster, type OSRSDrop } from "@/lib/osrs-api";
+import { useDebounce } from "@/hooks/useDebounce";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<OSRSMonster[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autocompleteOptions, setAutocompleteOptions] = useState<{value: string; label: string}[]>([]);
+  const [isLoadingAutocomplete, setIsLoadingAutocomplete] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
 
     setIsLoading(true);
     setError(null);
+    setHasSearched(true);
 
     try {
       const response = await searchItems(searchQuery);
@@ -29,10 +36,40 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    const fetchAutocomplete = async () => {
+      if (debouncedSearchQuery.length < 2) {
+        setAutocompleteOptions([]);
+        return;
+      }
+
+      setIsLoadingAutocomplete(true);
+      try {
+        const names = await searchMonsterNames(debouncedSearchQuery, 8);
+        setAutocompleteOptions(
+          names.map(name => ({ value: name, label: name }))
+        );
+      } catch (error) {
+        console.error('Autocomplete search failed:', error);
+        setAutocompleteOptions([]);
+      } finally {
+        setIsLoadingAutocomplete(false);
+      }
+    };
+
+    fetchAutocomplete();
+  }, [debouncedSearchQuery]);
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       handleSearch();
     }
+  };
+
+  const handleAutocompleteSelect = (option: {value: string; label: string}) => {
+    setSearchQuery(option.value);
+    setHasSearched(true);
+    handleSearch();
   };
 
   return (
@@ -54,11 +91,15 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <div className="flex gap-4">
-              <Input
-                placeholder="Search for monsters (e.g., 'cow', 'goblin', 'giant')..."
+              <Autocomplete
+                options={autocompleteOptions}
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={setSearchQuery}
+                onSelect={handleAutocompleteSelect}
                 onKeyPress={handleKeyPress}
+                placeholder="Search for monsters (e.g., 'cow', 'goblin', 'giant')..."
+                isLoading={isLoadingAutocomplete}
+                disabled={isLoading}
                 className="flex-1"
               />
               <Button onClick={handleSearch} disabled={isLoading}>
@@ -165,7 +206,7 @@ export default function Home() {
           </div>
         )}
 
-        {searchResults.length === 0 && searchQuery && !isLoading && !error && (
+        {searchResults.length === 0 && searchQuery && !isLoading && !error && hasSearched && (
           <Card>
             <CardContent className="text-center py-8">
               <p className="text-muted-foreground">

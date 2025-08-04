@@ -14,6 +14,8 @@ LootSim is a Next.js application that integrates with the Old School RuneScape W
 - Monster search with real-time API integration
 - Wikitext parsing for drop table extraction
 - Categorized drop displays (100%, Tertiary, etc.)
+- **Loot simulation engine** - simulate killing monsters up to 100,000 times
+- Drop probability calculator with statistical analysis
 - Combat stats display (level, hitpoints)
 - Responsive design with loading states
 - Direct links to OSRS Wiki pages
@@ -72,6 +74,8 @@ npx shadcn@latest add [component-name]
 src/
 ├── app/
 │   ├── page.tsx              # Main search interface
+│   ├── simulate/
+│   │   └── page.tsx          # Loot simulation page
 │   ├── layout.tsx            # Root layout
 │   └── globals.css           # Global styles
 ├── components/
@@ -127,14 +131,23 @@ Good test cases for development:
 - `goblin` - Basic monster with minimal drops
 - `dragon` - Should show multiple dragon-type monsters
 
+## Simulation Features
+- **Drop Rate Parser**: Converts wiki drop rates (1/128, Always, etc.) to probabilities
+- **Kill Simulator**: Simulates individual monster kills with RNG
+- **Statistical Analysis**: Tracks total items, unique drops, and success rates
+- **Results Display**: Shows actual vs expected drop rates
+- **Performance**: Can handle up to 100,000 simulated kills efficiently
+
 ## Future Enhancements
-- [ ] Add drop rate probability calculations
-- [ ] Implement monster filtering by combat level
+- [x] ~~Add drop rate probability calculations~~ ✅ **COMPLETED**
+- [x] ~~Implement drop simulation features~~ ✅ **COMPLETED**
 - [ ] Add drop value calculations using Grand Exchange prices
+- [ ] Implement monster filtering by combat level
 - [ ] Create monster comparison views
 - [ ] Add favorite monsters functionality
-- [ ] Implement drop simulation features
 - [ ] Add search history
+- [ ] Export simulation results to CSV/JSON
+- [ ] Add simulation presets (common kill counts)
 - [ ] Mobile app version
 
 ## Dependencies

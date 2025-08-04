@@ -85,15 +85,32 @@ export default function Home() {
                         {monster.hitpoints && `Hitpoints: ${monster.hitpoints}`}
                       </CardDescription>
                     </div>
-                    <Button variant="outline" size="sm" asChild>
-                      <a
-                        href={monster.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        onClick={() => {
+                          const monsterParam = encodeURIComponent(JSON.stringify({
+                            title: monster.title,
+                            drops: monster.drops,
+                            combatLevel: monster.combatLevel,
+                            hitpoints: monster.hitpoints
+                          }));
+                          window.location.href = `/simulate?monster=${monsterParam}`;
+                        }}
                       >
-                        View on Wiki →
-                      </a>
-                    </Button>
+                        Simulate Drops
+                      </Button>
+                      <Button variant="outline" size="sm" asChild>
+                        <a
+                          href={monster.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View on Wiki →
+                        </a>
+                      </Button>
+                    </div>
                   </div>
                   {monster.extract && (
                     <p className="text-sm text-muted-foreground mt-3">

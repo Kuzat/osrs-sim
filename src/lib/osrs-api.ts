@@ -101,6 +101,34 @@ export async function searchMonsters(query: string, limit: number = 10): Promise
   }
 
   try {
+    // First, get monster names using category-based search
+    const monsterNames = await searchMonsterNames(query, limit * 2); // Get more to account for filtering
+    
+    if (monsterNames.length === 0) {
+      return { searchTerm: query, results: [] };
+    }
+    
+    // Get detailed data for found monsters
+    const monsterPromises = monsterNames.slice(0, limit).map(async (title: string) => {
+      const monsterData = await getMonsterDetails(title);
+      return monsterData;
+    });
+    
+    const monsters = await Promise.all(monsterPromises);
+    const validMonsters = monsters.filter((monster): monster is OSRSMonster => 
+      monster !== null && monster.drops.length > 0
+    );
+
+    return { searchTerm: query, results: validMonsters };
+  } catch (error) {
+    console.error('Error searching monsters:', error);
+    // Fallback to original opensearch method
+    return searchMonstersFallback(query, limit);
+  }
+}
+
+async function searchMonstersFallback(query: string, limit: number = 10): Promise<OSRSSearchResponse> {
+  try {
     const searchUrl = new URL(OSRS_WIKI_API_BASE);
     searchUrl.searchParams.set('action', 'opensearch');
     searchUrl.searchParams.set('search', query);
@@ -133,9 +161,9 @@ export async function searchMonsters(query: string, limit: number = 10): Promise
       monster !== null && monster.drops.length > 0
     );
 
-    return { searchTerm, results: validMonsters };
+    return { searchTerm: searchTerm, results: validMonsters };
   } catch (error) {
-    console.error('Error searching monsters:', error);
+    console.error('Error in fallback search:', error);
     throw error;
   }
 }
@@ -231,6 +259,49 @@ export async function searchMonsterNames(query: string, limit: number = 10): Pro
   }
 
   try {
+    // Use category-based search for more accurate monster filtering
+    const searchUrl = new URL(OSRS_WIKI_API_BASE);
+    searchUrl.searchParams.set('action', 'query');
+    searchUrl.searchParams.set('list', 'categorymembers');
+    searchUrl.searchParams.set('cmtitle', 'Category:Monsters');
+    searchUrl.searchParams.set('cmlimit', '500'); // Get more results to filter
+    searchUrl.searchParams.set('cmtype', 'page');
+    searchUrl.searchParams.set('format', 'json');
+    searchUrl.searchParams.set('origin', '*');
+
+    const response = await fetch(searchUrl.toString());
+    
+    if (!response.ok) {
+      throw new Error(`Search failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.query?.categorymembers) {
+      return [];
+    }
+
+    const monsters = data.query.categorymembers;
+    
+    // Filter monster names that match the query (case-insensitive)
+    const queryLower = query.toLowerCase();
+    const filteredMonsters = monsters
+      .filter((monster: { title: string }) => 
+        monster.title.toLowerCase().includes(queryLower)
+      )
+      .map((monster: { title: string }) => monster.title)
+      .slice(0, limit);
+
+    return filteredMonsters;
+  } catch (error) {
+    console.error('Error searching monster names:', error);
+    // Fallback to original opensearch method
+    return searchMonsterNamesFallback(query, limit);
+  }
+}
+
+async function searchMonsterNamesFallback(query: string, limit: number = 10): Promise<string[]> {
+  try {
     const searchUrl = new URL(OSRS_WIKI_API_BASE);
     searchUrl.searchParams.set('action', 'opensearch');
     searchUrl.searchParams.set('search', query);
@@ -253,7 +324,7 @@ export async function searchMonsterNames(query: string, limit: number = 10): Pro
     const [, titles] = data;
     return Array.isArray(titles) ? titles : [];
   } catch (error) {
-    console.error('Error searching monster names:', error);
+    console.error('Error in fallback search:', error);
     return [];
   }
 }

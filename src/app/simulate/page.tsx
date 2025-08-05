@@ -252,7 +252,7 @@ function SimulateContent() {
 
   if (!monster) {
     return (
-      <div className="min-h-screen p-8 max-w-4xl">
+      <div className="min-h-screen p-8 max-w-6xl">
         <div className="text-center">
           <p>Loading monster data...</p>
         </div>
@@ -261,7 +261,7 @@ function SimulateContent() {
   }
 
   return (
-    <div className="min-h-screen p-8 max-w-6xl">
+    <div className="min-h-screen p-8 w-full max-w-6xl">
       <div className="mb-6">
         <Button 
           variant="outline" 
@@ -510,7 +510,7 @@ function SimulateContent() {
 export default function SimulatePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen p-8 max-w-4xl">
+      <div className="min-h-screen p-8 max-w-6xl">
         <div className="text-center">
           <p>Loading simulation...</p>
         </div>

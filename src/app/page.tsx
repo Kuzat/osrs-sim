@@ -74,7 +74,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen p-8 max-w-6xl md:mx-10">
+    <div className="min-h-screen p-8 w-full max-w-6xl md:mt-10">
       <header className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-4">OSRS Monster LootSim</h1>
         <p className="text-lg text-muted-foreground">

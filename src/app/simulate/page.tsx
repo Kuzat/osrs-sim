@@ -101,6 +101,26 @@ function SimulateContent() {
     return 0.001;
   };
 
+  const parseQuantity = (quantityString: string): number => {
+    // Handle ranges like "200,300" or "1-3" or "10–15" or "5, 10" or "100-200"
+    const rangeMatch = quantityString.match(/(\d+)[\s,\-–]+(\d+)/);
+    if (rangeMatch) {
+      const min = parseInt(rangeMatch[1]);
+      const max = parseInt(rangeMatch[2]);
+      // Return a random number between min and max (inclusive)
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    
+    // Handle single numbers, extracting only the first number found
+    const singleMatch = quantityString.match(/(\d+)/);
+    if (singleMatch) {
+      return parseInt(singleMatch[1]);
+    }
+    
+    // Default to 1 if no number found
+    return 1;
+  };
+
   const simulateKills = () => {
     if (!monster) return;
 
@@ -159,7 +179,7 @@ function SimulateContent() {
             };
           }
           
-          const quantityToAdd = parseInt(drop.quantity.replace(/[^\d]/g, '')) || 1;
+          const quantityToAdd = parseQuantity(drop.quantity);
           results[key].quantity += quantityToAdd;
           results[key].timesDropped += 1;
         });
@@ -184,7 +204,7 @@ function SimulateContent() {
                 };
               }
               
-              const quantityToAdd = parseInt(drop.quantity.replace(/[^\d]/g, '')) || 1;
+              const quantityToAdd = parseQuantity(drop.quantity);
               results[key].quantity += quantityToAdd;
               results[key].timesDropped += 1;
               break;
@@ -210,7 +230,7 @@ function SimulateContent() {
               };
             }
             
-            const quantityToAdd = parseInt(drop.quantity.replace(/[^\d]/g, '')) || 1;
+            const quantityToAdd = parseQuantity(drop.quantity);
             results[key].quantity += quantityToAdd;
             results[key].timesDropped += 1;
           }

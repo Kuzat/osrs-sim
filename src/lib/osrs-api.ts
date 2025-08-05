@@ -36,6 +36,8 @@ function parseDropsFromWikitext(wikitext: string): OSRSDrop[] {
   // Find all DropsLine templates
   const dropsLineRegex = /\{\{DropsLine\|([^}]+)\}\}/g;
   const dropsClueRegex = /\{\{DropsLineClue\|([^}]+)\}\}/g;
+  const herbDropLinesRegex = /\{\{HerbDropLines\|([^}]+)\}\}/g;
+  const rareSeedDropLinesRegex = /\{\{RareSeedDropLines\|([^}]+)\}\}/g;
   
   // Current category for organizing drops
   let currentCategory = 'Unknown';
@@ -76,6 +78,24 @@ function parseDropsFromWikitext(wikitext: string): OSRSDrop[] {
         category: 'Tertiary'
       });
     });
+    
+    // Parse HerbDropLines entries
+    const herbMatches = [...line.matchAll(herbDropLinesRegex)];
+    herbMatches.forEach(match => {
+      const params = parseTemplateParams(match[1]);
+      const baseRate = params['0'] || params['1'] || 'Unknown'; // First parameter is the rate
+      const herbDrops = parseHerbDropTable(baseRate, currentCategory);
+      drops.push(...herbDrops);
+    });
+    
+    // Parse RareSeedDropLines entries
+    const seedMatches = [...line.matchAll(rareSeedDropLinesRegex)];
+    seedMatches.forEach(match => {
+      const params = parseTemplateParams(match[1]);
+      const baseRate = params['0'] || params['1'] || 'Unknown'; // First parameter is the rate
+      const seedDrops = parseRareSeedDropTable(baseRate, currentCategory);
+      drops.push(...seedDrops);
+    });
   }
   
   return drops;
@@ -85,14 +105,76 @@ function parseTemplateParams(paramString: string): Record<string, string> {
   const params: Record<string, string> = {};
   const pairs = paramString.split('|');
   
-  pairs.forEach(pair => {
+  pairs.forEach((pair, index) => {
     const [key, ...valueParts] = pair.split('=');
     if (key && valueParts.length > 0) {
       params[key.trim()] = valueParts.join('=').trim();
+    } else if (index === 0) {
+      // First parameter without key=value format
+      params['0'] = pair.trim();
+    } else {
+      // Numbered parameters
+      params[index.toString()] = pair.trim();
     }
   });
   
   return params;
+}
+
+function parseHerbDropTable(baseRate: string, category: string): OSRSDrop[] {
+  // Standard OSRS herb drop table - common herbs used by many monsters
+  const herbs = [
+    { name: 'Grimy guam leaf', weight: 19 },
+    { name: 'Grimy marrentill', weight: 15 },
+    { name: 'Grimy tarromin', weight: 12 },
+    { name: 'Grimy harralander', weight: 9 },
+    { name: 'Grimy ranarr weed', weight: 6 },
+    { name: 'Grimy toadflax', weight: 4 },
+    { name: 'Grimy irit leaf', weight: 4 },
+    { name: 'Grimy avantoe', weight: 3 },
+    { name: 'Grimy kwuarm', weight: 2 },
+    { name: 'Grimy snapdragon', weight: 2 },
+    { name: 'Grimy cadantine', weight: 1 },
+    { name: 'Grimy lantadyme', weight: 1 },
+    { name: 'Grimy dwarf weed', weight: 1 }
+  ];
+  
+  // Calculate individual herb rates based on the base rate and herb weights
+  const totalWeight = herbs.reduce((sum, herb) => sum + herb.weight, 0);
+  
+  return herbs.map(herb => ({
+    name: herb.name,
+    quantity: '1-3', // Herbs typically drop 1-3 per roll
+    rarity: `${baseRate} (${herb.weight}/${totalWeight})`,
+    category: category
+  }));
+}
+
+function parseRareSeedDropTable(baseRate: string, category: string): OSRSDrop[] {
+  // Standard OSRS rare seed drop table - used by many monsters
+  const seeds = [
+    { name: 'Toadflax seed', rarity: '1/33.8' },
+    { name: 'Irit seed', rarity: '1/49.7' },
+    { name: 'Belladonna seed', rarity: '1/51.3' },
+    { name: 'Poison ivy seed', rarity: '1/72.3' },
+    { name: 'Avantoe seed', rarity: '1/72.3' },
+    { name: 'Cactus seed', rarity: '1/75.7' },
+    { name: 'Potato cactus seed', rarity: '1/106' },
+    { name: 'Kwuarm seed', rarity: '1/106' },
+    { name: 'Snapdragon seed', rarity: '1/159' },
+    { name: 'Cadantine seed', rarity: '1/227.1' },
+    { name: 'Lantadyme seed', rarity: '1/318' },
+    { name: 'Snape grass seed', rarity: '1/397.5', quantity: '3' },
+    { name: 'Dwarf weed seed', rarity: '1/530' },
+    { name: 'Torstol seed', rarity: '1/794.9' }
+  ];
+  
+  return seeds.map(seed => ({
+    name: seed.name,
+    quantity: seed.quantity || '1',
+    rarity: `${baseRate} then ${seed.rarity}`,
+    category: category
+  }));
 }
 
 export async function searchMonsters(query: string, limit: number = 10): Promise<OSRSSearchResponse> {

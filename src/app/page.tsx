@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Autocomplete } from "@/components/ui/autocomplete";
 import { ItemIcon } from "@/components/ui/item-icon";
+import { CacheStatus } from "@/components/cache-status";
 import { searchItems, searchMonsterNames, type OSRSMonster, type OSRSDrop } from "@/lib/osrs-api";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -16,6 +17,7 @@ export default function Home() {
   const [autocompleteOptions, setAutocompleteOptions] = useState<{value: string; label: string}[]>([]);
   const [isLoadingAutocomplete, setIsLoadingAutocomplete] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [searchMeta, setSearchMeta] = useState<{source?: 'cache' | 'api', searchTime?: number} | null>(null);
   
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
@@ -81,13 +83,38 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     setHasSearched(true);
+    setSearchMeta(null);
+
+    const startTime = Date.now();
 
     try {
+      // Try API route first (which has cache integration)
+      try {
+        const response = await fetch(`/api/monsters/search?q=${encodeURIComponent(searchTerm)}&limit=10`);
+        if (response.ok) {
+          const data = await response.json();
+          setSearchResults(data.results || []);
+          setSearchMeta({
+            source: data.cached ? 'cache' : 'api',
+            searchTime: Date.now() - startTime
+          });
+          return;
+        }
+      } catch (apiError) {
+        console.warn('API route failed, falling back to direct search:', apiError);
+      }
+
+      // Fallback to direct API call
       const response = await searchItems(searchTerm);
       setSearchResults(response.results);
+      setSearchMeta({
+        source: 'api',
+        searchTime: Date.now() - startTime
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
       setSearchResults([]);
+      setSearchMeta(null);
     } finally {
       setIsLoading(false);
     }
@@ -103,6 +130,7 @@ export default function Home() {
       </header>
 
       <main className="space-y-8">
+        <CacheStatus />
         <Card>
           <CardHeader>
             <CardTitle>Monster Drop Search</CardTitle>
@@ -135,6 +163,29 @@ export default function Home() {
 
         {searchResults.length > 0 && (
           <div className="space-y-6">
+            <Card className="border-muted">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      Found {searchResults.length} monster{searchResults.length !== 1 ? 's' : ''}
+                    </span>
+                    {searchMeta?.source && (
+                      <span className={`text-xs px-2 py-1 rounded font-mono ${
+                        searchMeta.source === 'cache' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {searchMeta.source === 'cache' ? 'CACHE' : 'API'}
+                      </span>
+                    )}
+                  </div>
+                  {searchMeta?.searchTime && (
+                    <span className="text-xs text-muted-foreground">
+                      {searchMeta.searchTime}ms
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
             {searchResults.map((monster, index) => (
               <Card key={index}>
                 <CardHeader>

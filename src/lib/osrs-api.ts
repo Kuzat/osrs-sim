@@ -182,6 +182,33 @@ export async function searchMonsters(query: string, limit: number = 10): Promise
     return { searchTerm: query, results: [] };
   }
 
+  // Try cache first
+  try {
+    const { monsterCache } = await import('./monster-cache');
+    const cachedResults = await monsterCache.searchMonsters(query, limit);
+    
+    if (cachedResults.length > 0) {
+      console.log(`Cache hit: Found ${cachedResults.length} results for "${query}"`);
+      return {
+        searchTerm: query,
+        results: cachedResults.map(entry => ({
+          title: entry.title,
+          url: entry.url,
+          extract: entry.extract,
+          image: entry.image,
+          drops: entry.drops,
+          combatLevel: entry.combatLevel,
+          hitpoints: entry.hitpoints
+        }))
+      };
+    }
+    
+    console.log(`Cache miss for "${query}", falling back to API`);
+  } catch (error) {
+    console.warn('Cache unavailable, using API:', error);
+  }
+
+  // Fallback to original API-based search
   try {
     // First, get monster names using category-based search
     const monsterNames = await searchMonsterNames(query, limit * 2); // Get more to account for filtering

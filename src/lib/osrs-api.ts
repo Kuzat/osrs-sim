@@ -186,12 +186,25 @@ export async function searchMonsters(query: string, limit: number = 10): Promise
     // First, get monster names using category-based search
     const monsterNames = await searchMonsterNames(query, limit * 2); // Get more to account for filtering
     
-    if (monsterNames.length === 0) {
+    // If category search returns few/no results, also try opensearch and combine results
+    let allMonsterNames = monsterNames;
+    if (monsterNames.length < 5) {
+      try {
+        const fallbackNames = await searchMonsterNamesFallback(query, limit);
+        // Combine and deduplicate results, prioritizing category results
+        const uniqueNames = new Set([...monsterNames, ...fallbackNames]);
+        allMonsterNames = Array.from(uniqueNames);
+      } catch (fallbackError) {
+        console.warn('Fallback search failed, using category results only:', fallbackError);
+      }
+    }
+    
+    if (allMonsterNames.length === 0) {
       return { searchTerm: query, results: [] };
     }
     
     // Get detailed data for found monsters
-    const monsterPromises = monsterNames.slice(0, limit).map(async (title: string) => {
+    const monsterPromises = allMonsterNames.slice(0, limit).map(async (title: string) => {
       const monsterData = await getMonsterDetails(title);
       return monsterData;
     });
@@ -367,14 +380,26 @@ export async function searchMonsterNames(query: string, limit: number = 10): Pro
     
     // Filter monster names that match the query (case-insensitive)
     const queryLower = query.toLowerCase();
-    const filteredMonsters = monsters
+    const categoryResults = monsters
       .filter((monster: { title: string }) => 
         monster.title.toLowerCase().includes(queryLower)
       )
-      .map((monster: { title: string }) => monster.title)
-      .slice(0, limit);
+      .map((monster: { title: string }) => monster.title);
 
-    return filteredMonsters;
+    // If we have few category results, also try opensearch to find pages like "Goblin"
+    let allResults = categoryResults;
+    if (categoryResults.length < 8) {
+      try {
+        const fallbackResults = await searchMonsterNamesFallback(query, limit * 2);
+        // Combine and deduplicate results, prioritizing category results
+        const uniqueNames = new Set([...categoryResults, ...fallbackResults]);
+        allResults = Array.from(uniqueNames);
+      } catch (fallbackError) {
+        console.warn('Fallback name search failed:', fallbackError);
+      }
+    }
+
+    return allResults.slice(0, limit);
   } catch (error) {
     console.error('Error searching monster names:', error);
     // Fallback to original opensearch method

@@ -132,8 +132,14 @@ export function Autocomplete({
                       className="cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-muted-foreground/30"></div>
-                        <span>{option.label}</span>
+                        {option.label.startsWith('Search for "') ? (
+                          <div className="w-2 h-2 rounded-sm bg-primary/60"></div>
+                        ) : (
+                          <div className="w-2 h-2 rounded-full bg-muted-foreground/30"></div>
+                        )}
+                        <span className={option.label.startsWith('Search for "') ? "text-primary" : ""}>
+                          {option.label}
+                        </span>
                       </div>
                     </CommandItem>
                   ))}

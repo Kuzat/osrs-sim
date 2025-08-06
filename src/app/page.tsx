@@ -33,9 +33,22 @@ export default function Home() {
       setIsLoadingAutocomplete(true);
       try {
         const names = await searchMonsterNames(debouncedSearchQuery, 8);
-        setAutocompleteOptions(
-          names.map(name => ({ value: name, label: name }))
+        
+        // Always include the typed text as the first option if it doesn't exactly match any suggestion
+        const suggestions = names.map(name => ({ value: name, label: name }));
+        const typedText = debouncedSearchQuery.trim();
+        const exactMatch = suggestions.some(option => 
+          option.value.toLowerCase() === typedText.toLowerCase()
         );
+        
+        if (!exactMatch && typedText.length > 0) {
+          suggestions.unshift({ 
+            value: typedText, 
+            label: `Search for "${typedText}"` 
+          });
+        }
+        
+        setAutocompleteOptions(suggestions);
       } catch (error) {
         console.error('Autocomplete search failed:', error);
         setAutocompleteOptions([]);

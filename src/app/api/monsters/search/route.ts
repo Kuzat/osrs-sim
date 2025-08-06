@@ -21,22 +21,49 @@ export async function GET(request: NextRequest) {
     }
 
     // Search in cache
-    const results = await monsterCache.searchMonsters(query, limit);
-    const stats = monsterCache.getStats();
+    const cacheResult = await monsterCache.searchMonsters(query, limit);
+    
+    // If we have cached results, return them
+    if (cacheResult.fromCache && cacheResult.results.length > 0) {
+      const stats = monsterCache.getStats();
+      return NextResponse.json({
+        searchTerm: query,
+        results: cacheResult.results,
+        cached: true,
+        stats: {
+          totalMonsters: stats.totalMonsters,
+          cacheHitRate: stats.cacheHitRate,
+          averageSearchTime: stats.averageSearchTime
+        },
+        meta: {
+          resultsCount: cacheResult.results.length,
+          searchTime: Date.now(),
+          source: 'cache'
+        }
+      });
+    }
 
+    // Cache miss - fall back to API and cache results
+    console.log(`Cache miss for "${query}", fetching from API...`);
+    const { searchMonsters } = await import('@/lib/osrs-api');
+    const apiResults = await searchMonsters(query, limit);
+    
+    // The searchMonsters function will automatically cache the results
+    const stats = monsterCache.getStats();
+    
     return NextResponse.json({
-      searchTerm: query,
-      results: results,
-      cached: true,
+      ...apiResults,
+      cached: false,
       stats: {
         totalMonsters: stats.totalMonsters,
         cacheHitRate: stats.cacheHitRate,
         averageSearchTime: stats.averageSearchTime
       },
       meta: {
-        resultsCount: results.length,
-        searchTime: Date.now(), // Will be calculated by client
-        source: 'cache'
+        resultsCount: apiResults.results.length,
+        searchTime: Date.now(),
+        source: 'api',
+        cacheMiss: true
       }
     });
 

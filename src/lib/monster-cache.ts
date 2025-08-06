@@ -9,6 +9,7 @@ export interface MonsterCacheEntry {
   combatLevel?: number;
   hitpoints?: number;
   lastUpdated: Date;
+  expiresAt: Date;
   searchKeywords: string[];
 }
 
@@ -29,61 +30,82 @@ class MonsterCacheService {
     averageSearchTime: 0
   };
   private searchMetrics = { hits: 0, misses: 0, totalTime: 0, searches: 0 };
-
-  private isInitialized = false;
-  private initPromise: Promise<void> | null = null;
+  
+  // Cache configuration
+  private readonly TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+  private readonly MAX_CACHE_SIZE = 1000; // Prevent unbounded growth
 
   constructor() {
-    this.initPromise = this.initializeCache();
-  }
-
-  private async initializeCache(): Promise<void> {
     this.loadCacheFromStorage();
-    await this.initializeCacheFromJSON();
-    this.isInitialized = true;
+    // No need for async initialization with pre-built cache
+    // Cache will be populated on-demand
   }
 
-  private async ensureInitialized(): Promise<void> {
-    if (!this.isInitialized && this.initPromise) {
-      await this.initPromise;
+  /**
+   * Check if a cache entry is expired
+   */
+  private isExpired(entry: MonsterCacheEntry): boolean {
+    return Date.now() > entry.expiresAt.getTime();
+  }
+
+  /**
+   * Remove expired entries from cache
+   */
+  private cleanExpiredEntries(): void {
+    const now = Date.now();
+    const expiredKeys: string[] = [];
+
+    for (const [key, entry] of this.cache.entries()) {
+      if (now > entry.expiresAt.getTime()) {
+        expiredKeys.push(key);
+      }
+    }
+
+    for (const key of expiredKeys) {
+      this.cache.delete(key);
+      this.removeFromSearchIndex(key);
+    }
+
+    if (expiredKeys.length > 0) {
+      console.log(`Cleaned ${expiredKeys.length} expired cache entries`);
+      this.updateStats();
+      this.saveCacheToStorage();
     }
   }
 
   /**
-   * Initialize cache from pre-built JSON file (for production builds)
+   * Remove a monster from the search index
    */
-  private async initializeCacheFromJSON(): Promise<void> {
-    // Only load from JSON if cache is empty
-    if (this.cache.size > 0) {
+  private removeFromSearchIndex(title: string): void {
+    for (const [keyword, titleSet] of this.searchIndex.entries()) {
+      titleSet.delete(title);
+      if (titleSet.size === 0) {
+        this.searchIndex.delete(keyword);
+      }
+    }
+  }
+
+  /**
+   * Enforce cache size limits by removing oldest entries
+   */
+  private enforceCacheSize(): void {
+    if (this.cache.size <= this.MAX_CACHE_SIZE) {
       return;
     }
 
-    try {
-      // Try to import the pre-built cache file
-      const cacheModule = await import('../data/monster-cache.json');
-      const data = cacheModule.default || cacheModule;
-      
-      if (data.version === '1.0' && data.monsters && Array.isArray(data.monsters)) {
-        console.log('Loading monster cache from pre-built JSON...');
-        
-        // Load monsters from JSON
-        for (const [title, monster] of data.monsters) {
-          const entry: MonsterCacheEntry = {
-            ...monster,
-            lastUpdated: new Date(monster.lastUpdated || data.buildDate),
-            searchKeywords: this.generateSearchKeywords(monster.title)
-          };
-          
-          this.cache.set(title, entry);
-          this.updateSearchIndex(entry);
-        }
-        
-        this.updateStats();
-        console.log(`Loaded ${this.cache.size} monsters from pre-built cache`);
-      }
-    } catch {
-      console.log('No pre-built cache found, cache will be populated dynamically');
+    // Convert to array and sort by lastUpdated (oldest first)
+    const entries = Array.from(this.cache.entries())
+      .sort(([, a], [, b]) => a.lastUpdated.getTime() - b.lastUpdated.getTime());
+
+    const toRemove = entries.slice(0, this.cache.size - this.MAX_CACHE_SIZE);
+    
+    for (const [title] of toRemove) {
+      this.cache.delete(title);
+      this.removeFromSearchIndex(title);
     }
+
+    console.log(`Removed ${toRemove.length} oldest cache entries to maintain size limit`);
+    this.updateStats();
   }
 
   /**
@@ -141,9 +163,12 @@ class MonsterCacheService {
     // Load monsters
     if (data.monsters && Array.isArray(data.monsters)) {
       for (const [title, entry] of data.monsters) {
+        const now = new Date();
         this.cache.set(title, {
           ...entry,
-          lastUpdated: new Date(entry.lastUpdated)
+          lastUpdated: new Date(entry.lastUpdated || now),
+          expiresAt: new Date(entry.expiresAt || now.getTime() + this.TTL_MS),
+          searchKeywords: entry.searchKeywords || this.generateSearchKeywords(entry.title || title)
         });
       }
     }
@@ -167,18 +192,22 @@ class MonsterCacheService {
   }
 
   /**
-   * Add or update a monster in the cache
+   * Add or update a monster in the cache with TTL
    */
   public setMonster(monster: OSRSMonster): void {
+    const now = new Date();
     const entry: MonsterCacheEntry = {
       ...monster,
-      lastUpdated: new Date(),
+      lastUpdated: now,
+      expiresAt: new Date(now.getTime() + this.TTL_MS),
       searchKeywords: this.generateSearchKeywords(monster.title)
     };
 
     this.cache.set(monster.title, entry);
     this.updateSearchIndex(entry);
     this.updateStats();
+    this.enforceCacheSize();
+    this.saveCacheToStorage();
   }
 
   /**
@@ -243,47 +272,52 @@ class MonsterCacheService {
   }
 
   /**
-   * Search monsters by query string
+   * Search monsters by query string with cache-miss handling
    */
-  public async searchMonsters(query: string, limit: number = 10): Promise<MonsterCacheEntry[]> {
-    await this.ensureInitialized();
+  public async searchMonsters(query: string, limit: number = 10): Promise<{ results: MonsterCacheEntry[], fromCache: boolean }> {
     const startTime = Date.now();
     
     if (!query.trim()) {
-      return [];
+      return { results: [], fromCache: true };
     }
+
+    // Clean expired entries first
+    this.cleanExpiredEntries();
 
     const queryLower = query.toLowerCase();
     const matchScores = new Map<string, number>();
-
-    // Find all potential matches through search index
     const potentialMatches = new Set<string>();
     
-    // Exact keyword matches
-    if (this.searchIndex.has(queryLower)) {
-      for (const title of this.searchIndex.get(queryLower)!) {
-        potentialMatches.add(title);
-        matchScores.set(title, (matchScores.get(title) || 0) + 100);
-      }
-    }
-
-    // Prefix matches
+    // Search through cached, non-expired entries
     for (const [keyword, titleSet] of this.searchIndex.entries()) {
-      if (keyword.startsWith(queryLower)) {
+      // Exact matches
+      if (keyword === queryLower) {
         for (const title of titleSet) {
-          potentialMatches.add(title);
-          const score = matchScores.get(title) || 0;
-          // Higher score for longer matches
-          matchScores.set(title, score + (keyword.length === queryLower.length ? 50 : 25));
+          const entry = this.cache.get(title);
+          if (entry && !this.isExpired(entry)) {
+            potentialMatches.add(title);
+            matchScores.set(title, (matchScores.get(title) || 0) + 100);
+          }
         }
       }
-    }
-
-    // Contains matches (for partial searches)
-    if (potentialMatches.size < limit * 2) {
-      for (const [keyword, titleSet] of this.searchIndex.entries()) {
-        if (keyword.includes(queryLower) && !keyword.startsWith(queryLower)) {
-          for (const title of titleSet) {
+      
+      // Prefix matches
+      else if (keyword.startsWith(queryLower)) {
+        for (const title of titleSet) {
+          const entry = this.cache.get(title);
+          if (entry && !this.isExpired(entry)) {
+            potentialMatches.add(title);
+            const score = matchScores.get(title) || 0;
+            matchScores.set(title, score + (keyword.length === queryLower.length ? 50 : 25));
+          }
+        }
+      }
+      
+      // Contains matches (if we need more results)
+      else if (potentialMatches.size < limit * 2 && keyword.includes(queryLower)) {
+        for (const title of titleSet) {
+          const entry = this.cache.get(title);
+          if (entry && !this.isExpired(entry)) {
             potentialMatches.add(title);
             const score = matchScores.get(title) || 0;
             matchScores.set(title, score + 10);
@@ -292,26 +326,17 @@ class MonsterCacheService {
       }
     }
 
-    // Convert to array and sort by score
-    const results = Array.from(potentialMatches)
+    // Sort and limit results
+    const cachedResults = Array.from(potentialMatches)
       .map(title => ({
         title,
         monster: this.cache.get(title)!,
         score: matchScores.get(title) || 0
       }))
-      .filter(item => item.monster) // Ensure monster exists
+      .filter(item => item.monster && !this.isExpired(item.monster))
       .sort((a, b) => {
-        // Sort by score first
-        if (a.score !== b.score) {
-          return b.score - a.score;
-        }
-        
-        // Then by title length (shorter = more specific)
-        if (a.title.length !== b.title.length) {
-          return a.title.length - b.title.length;
-        }
-        
-        // Finally alphabetical
+        if (a.score !== b.score) return b.score - a.score;
+        if (a.title.length !== b.title.length) return a.title.length - b.title.length;
         return a.title.localeCompare(b.title);
       })
       .slice(0, limit)
@@ -321,28 +346,55 @@ class MonsterCacheService {
     const searchTime = Date.now() - startTime;
     this.searchMetrics.searches++;
     this.searchMetrics.totalTime += searchTime;
-    this.searchMetrics.hits += results.length > 0 ? 1 : 0;
-    this.searchMetrics.misses += results.length === 0 ? 1 : 0;
     
-    // Update cache hit rate
+    if (cachedResults.length > 0) {
+      this.searchMetrics.hits++;
+      this.stats.cacheHitRate = this.searchMetrics.hits / this.searchMetrics.searches;
+      this.stats.averageSearchTime = this.searchMetrics.totalTime / this.searchMetrics.searches;
+      
+      return { results: cachedResults, fromCache: true };
+    }
+
+    // Cache miss - return empty results, caller should handle API fallback
+    this.searchMetrics.misses++;
     this.stats.cacheHitRate = this.searchMetrics.hits / this.searchMetrics.searches;
     this.stats.averageSearchTime = this.searchMetrics.totalTime / this.searchMetrics.searches;
 
-    return results;
+    return { results: [], fromCache: false };
   }
 
   /**
-   * Get a specific monster from cache
+   * Get a specific monster from cache (if not expired)
    */
   public getMonster(title: string): MonsterCacheEntry | null {
-    return this.cache.get(title) || null;
+    const entry = this.cache.get(title);
+    if (!entry) return null;
+    
+    if (this.isExpired(entry)) {
+      this.cache.delete(title);
+      this.removeFromSearchIndex(title);
+      this.updateStats();
+      return null;
+    }
+    
+    return entry;
   }
 
   /**
-   * Check if monster exists in cache
+   * Check if monster exists in cache and is not expired
    */
   public hasMonster(title: string): boolean {
-    return this.cache.has(title);
+    const entry = this.cache.get(title);
+    if (!entry) return false;
+    
+    if (this.isExpired(entry)) {
+      this.cache.delete(title);
+      this.removeFromSearchIndex(title);
+      this.updateStats();
+      return false;
+    }
+    
+    return true;
   }
 
   /**

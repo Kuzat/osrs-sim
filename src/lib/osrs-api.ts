@@ -185,13 +185,13 @@ export async function searchMonsters(query: string, limit: number = 10): Promise
   // Try cache first
   try {
     const { monsterCache } = await import('./monster-cache');
-    const cachedResults = await monsterCache.searchMonsters(query, limit);
+    const cacheResult = await monsterCache.searchMonsters(query, limit);
     
-    if (cachedResults.length > 0) {
-      console.log(`Cache hit: Found ${cachedResults.length} results for "${query}"`);
+    if (cacheResult.fromCache && cacheResult.results.length > 0) {
+      console.log(`Cache hit: Found ${cacheResult.results.length} results for "${query}"`);
       return {
         searchTerm: query,
-        results: cachedResults.map(entry => ({
+        results: cacheResult.results.map(entry => ({
           title: entry.title,
           url: entry.url,
           extract: entry.extract,
@@ -281,6 +281,17 @@ export async function searchMonsters(query: string, limit: number = 10): Promise
     const validMonsters = monsters.filter((monster): monster is OSRSMonster => 
       monster !== null && monster.drops.length > 0
     );
+
+    // Cache the results for future searches
+    try {
+      const { monsterCache } = await import('./monster-cache');
+      for (const monster of validMonsters) {
+        monsterCache.setMonster(monster);
+      }
+      console.log(`Cached ${validMonsters.length} monsters from API search for "${query}"`);
+    } catch (error) {
+      console.warn('Failed to cache API results:', error);
+    }
 
     return { searchTerm: query, results: validMonsters };
   } catch (error) {

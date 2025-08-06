@@ -97,7 +97,10 @@ export function CacheStatus() {
               {getStatusText(status.health.status)}
             </span>
             <span className="text-xs text-muted-foreground">
-              • {status.stats.totalMonsters} monsters cached
+              • {status.stats.totalMonsters > 0 
+                  ? `${status.stats.totalMonsters} monsters cached` 
+                  : 'Cache empty - will populate on search'
+                }
             </span>
           </div>
           

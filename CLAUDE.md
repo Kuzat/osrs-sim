@@ -177,3 +177,6 @@ Key packages and their purposes:
 - All changes should build successfully before committing
 - Use TypeScript strict mode and fix all warnings
 - **Always commit changes to git when working on new features or fixes**
+
+## Development Notes
+- Make sure to run npm run build before committing so we are sure it is able to build before adding to git

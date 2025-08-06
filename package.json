@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build-cache": "node scripts/build-monster-cache.js",
-    "prebuild": "npm run build-cache"
+    "build-cache": "node scripts/build-monster-cache.js"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",

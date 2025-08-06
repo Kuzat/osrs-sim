@@ -162,7 +162,15 @@ function SimulateContent() {
         return { drop, weight: 1 };
       });
       
-      const totalMainWeight = mainTableWeights.reduce((sum, item) => sum + item.weight, 0);
+      // FIXED: Use standard OSRS drop table denominator (128) instead of sum of weights
+      // This ensures correct probability distribution matching wiki drop rates
+      const totalMainWeight = 128;
+      const currentWeightSum = mainTableWeights.reduce((sum, item) => sum + item.weight, 0);
+      
+      // Validate that weights don't exceed the total (should not happen with proper wiki data)
+      if (currentWeightSum > totalMainWeight) {
+        console.warn(`Drop table weights (${currentWeightSum}) exceed expected total (${totalMainWeight}) for ${monster.title}`);
+      }
       
       for (let kill = 0; kill < killCount; kill++) {
         // 1. Always drops (bones, guaranteed items)
@@ -184,8 +192,8 @@ function SimulateContent() {
           results[key].timesDropped += 1;
         });
         
-        // 2. Main drop table (exactly one item per kill)
-        if (mainTableWeights.length > 0 && totalMainWeight > 0) {
+        // 2. Main drop table (exactly one item per kill, or nothing if weights don't fill table)
+        if (mainTableWeights.length > 0) {
           const random = Math.random() * totalMainWeight;
           let currentWeight = 0;
           
@@ -210,6 +218,8 @@ function SimulateContent() {
               break;
             }
           }
+          // If random > currentWeight, it means "nothing" was rolled (valid in OSRS)
+          // This happens when drop weights don't sum to 128 (e.g., rare drop tables)
         }
         
         // 3. Tertiary drops (independent rolls)

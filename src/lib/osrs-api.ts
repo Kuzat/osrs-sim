@@ -220,7 +220,7 @@ export async function searchMonsters(query: string, limit: number = 10): Promise
     
     // Sort by relevance before processing
     const queryLower = query.toLowerCase();
-    allMonsterNames.sort((a, b) => {
+    allMonsterNames.sort((a: string, b: string) => {
       const aLower = a.toLowerCase();
       const bLower = b.toLowerCase();
       
@@ -466,7 +466,7 @@ export async function searchMonsterNames(query: string, limit: number = 10): Pro
     }
 
     // Sort results by relevance - exact matches first, then by length, then alphabetically
-    const sortedResults = allResults.sort((a, b) => {
+    const sortedResults = allResults.sort((a: string, b: string) => {
       const aLower = a.toLowerCase();
       const bLower = b.toLowerCase();
       

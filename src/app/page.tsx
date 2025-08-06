@@ -20,21 +20,7 @@ export default function Home() {
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-
-    setIsLoading(true);
-    setError(null);
-    setHasSearched(true);
-
-    try {
-      const response = await searchItems(searchQuery);
-      setSearchResults(response.results);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Search failed");
-      setSearchResults([]);
-    } finally {
-      setIsLoading(false);
-    }
+    performSearch();
   };
 
   useEffect(() => {
@@ -69,8 +55,29 @@ export default function Home() {
 
   const handleAutocompleteSelect = (option: {value: string; label: string}) => {
     setSearchQuery(option.value);
+    // Trigger search immediately with the selected option
+    setTimeout(() => {
+      performSearch(option.value);
+    }, 0);
+  };
+
+  const performSearch = async (query?: string) => {
+    const searchTerm = query || searchQuery;
+    if (!searchTerm.trim()) return;
+
+    setIsLoading(true);
+    setError(null);
     setHasSearched(true);
-    handleSearch();
+
+    try {
+      const response = await searchItems(searchTerm);
+      setSearchResults(response.results);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Search failed");
+      setSearchResults([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

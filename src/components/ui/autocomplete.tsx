@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Input } from "./input";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./command";
 import { cn } from "@/lib/utils";
 
 interface AutocompleteOption {
@@ -33,9 +33,8 @@ export function Autocomplete({
   onKeyPress,
 }: AutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [selectedValue, setSelectedValue] = useState<string>("");
   const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -48,118 +47,102 @@ export function Autocomplete({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    setHighlightedIndex(-1);
-  }, [options]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    onChange(newValue);
+  const handleInputChange = (inputValue: string) => {
+    onChange(inputValue);
     setIsOpen(true);
-    setHighlightedIndex(-1);
+    setSelectedValue(""); // Clear selection when typing
+  };
+
+  const handleSelect = (optionValue: string) => {
+    const option = options.find(opt => opt.value === optionValue);
+    if (option) {
+      onChange(option.value);
+      setSelectedValue(option.value);
+      setIsOpen(false);
+      if (onSelect) {
+        onSelect(option);
+      }
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!isOpen && options.length > 0) {
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        setIsOpen(true);
+    // If Command component doesn't handle Enter and we have a selection, use it
+    if (e.key === 'Enter') {
+      if (selectedValue && options.find(opt => opt.value === selectedValue)) {
+        e.preventDefault();
+        const option = options.find(opt => opt.value === selectedValue)!;
+        handleSelect(option.value);
         return;
       }
-    }
-
-    if (isOpen) {
-      switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault();
-          setHighlightedIndex(prev => 
-            prev < options.length - 1 ? prev + 1 : prev
-          );
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          setHighlightedIndex(prev => prev > 0 ? prev - 1 : -1);
-          break;
-        case 'Enter':
-          if (highlightedIndex >= 0 && highlightedIndex < options.length) {
-            e.preventDefault();
-            handleSelect(options[highlightedIndex]);
-          } else if (onKeyPress) {
-            onKeyPress(e);
-          }
-          break;
-        case 'Escape':
-          setIsOpen(false);
-          setHighlightedIndex(-1);
-          inputRef.current?.blur();
-          break;
-        default:
-          if (onKeyPress) {
-            onKeyPress(e);
-          }
+      // If no selection, pass through to parent for search
+      if (onKeyPress) {
+        onKeyPress(e);
       }
-    } else if (onKeyPress) {
-      onKeyPress(e);
+    }
+    
+    if (e.key === 'Escape') {
+      setIsOpen(false);
     }
   };
 
-  const handleSelect = (option: AutocompleteOption) => {
-    onChange(option.value);
-    setIsOpen(false);
-    setHighlightedIndex(-1);
-    if (onSelect) {
-      onSelect(option);
-    }
-  };
-
-  const showDropdown = isOpen && options.length > 0 && value.length > 0;
+  const showDropdown = isOpen && value.length > 0;
 
   return (
     <div ref={containerRef} className={cn("relative", className)}>
-      <Input
-        ref={inputRef}
-        value={value}
-        onChange={handleInputChange}
+      <Command 
+        className="overflow-visible bg-transparent"
         onKeyDown={handleKeyDown}
-        onFocus={() => value.length > 0 && options.length > 0 && setIsOpen(true)}
-        placeholder={placeholder}
-        disabled={disabled}
-        className={cn(
-          showDropdown && "rounded-b-none border-b-0"
-        )}
-      />
-      
-      {showDropdown && (
-        <div className={cn(
-          "absolute top-full left-0 right-0 z-50",
-          "bg-background border border-t-0 rounded-b-md shadow-lg",
-          "max-h-60 overflow-y-auto"
-        )}>
-          {isLoading && (
-            <div className="px-3 py-2 text-sm text-muted-foreground">
-              Loading...
-            </div>
+        shouldFilter={false} // We handle filtering via API
+      >
+        <CommandInput
+          value={value}
+          onValueChange={handleInputChange}
+          onFocus={() => value.length > 0 && setIsOpen(true)}
+          placeholder={placeholder}
+          disabled={disabled}
+          className={cn(
+            "h-10",
+            showDropdown && "rounded-b-none"
           )}
-          {!isLoading && options.map((option, index) => (
-            <div
-              key={option.value}
-              className={cn(
-                "px-3 py-2 cursor-pointer text-sm",
-                "hover:bg-muted/50",
-                highlightedIndex === index && "bg-muted"
+        />
+        
+        {showDropdown && (
+          <div className="absolute top-full left-0 right-0 z-50">
+            <CommandList className="bg-background border border-t-0 rounded-b-md shadow-lg max-h-60">
+              {isLoading && (
+                <div className="px-3 py-2 text-sm text-muted-foreground">
+                  Loading monsters...
+                </div>
               )}
-              onClick={() => handleSelect(option)}
-              onMouseEnter={() => setHighlightedIndex(index)}
-            >
-              {option.label}
-            </div>
-          ))}
-          {!isLoading && options.length === 0 && value.length > 0 && (
-            <div className="px-3 py-2 text-sm text-muted-foreground">
-              No results found
-            </div>
-          )}
-        </div>
-      )}
+              
+              {!isLoading && options.length === 0 && (
+                <CommandEmpty className="py-6 text-center text-sm">
+                  No monsters found.
+                </CommandEmpty>
+              )}
+              
+              {!isLoading && options.length > 0 && (
+                <CommandGroup>
+                  {options.map((option) => (
+                    <CommandItem
+                      key={option.value}
+                      value={option.value}
+                      onSelect={() => handleSelect(option.value)}
+                      onMouseEnter={() => setSelectedValue(option.value)}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-muted-foreground/30"></div>
+                        <span>{option.label}</span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+            </CommandList>
+          </div>
+        )}
+      </Command>
     </div>
   );
 }

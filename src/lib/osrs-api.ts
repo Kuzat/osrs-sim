@@ -466,7 +466,6 @@ export async function searchMonsterNames(query: string, limit: number = 10): Pro
     }
 
     // Sort results by relevance - exact matches first, then by length, then alphabetically
-    const queryLower = query.toLowerCase();
     const sortedResults = allResults.sort((a, b) => {
       const aLower = a.toLowerCase();
       const bLower = b.toLowerCase();

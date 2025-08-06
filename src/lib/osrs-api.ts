@@ -190,14 +190,55 @@ export async function searchMonsters(query: string, limit: number = 10): Promise
     let allMonsterNames = monsterNames;
     if (monsterNames.length < 5) {
       try {
-        const fallbackNames = await searchMonsterNamesFallback(query, limit);
-        // Combine and deduplicate results, prioritizing category results
-        const uniqueNames = new Set([...monsterNames, ...fallbackNames]);
-        allMonsterNames = Array.from(uniqueNames);
+        const fallbackNames = await searchMonsterNamesFallback(query, limit * 2);
+        
+        // Filter and combine results
+        const validFallbackNames = [];
+        for (const title of fallbackNames) {
+          if (monsterNames.includes(title)) continue;
+          
+          // Quick filter for likely non-monsters
+          const titleLower = title.toLowerCase();
+          const isLikelyNonMonster = 
+            titleLower.includes('quest') ||
+            titleLower.includes('diary') ||
+            titleLower.includes('achievement') ||
+            titleLower.includes('minigame') ||
+            titleLower.includes('guide') ||
+            titleLower.includes('music');
+          
+          if (!isLikelyNonMonster) {
+            validFallbackNames.push(title);
+          }
+        }
+        
+        allMonsterNames = [...monsterNames, ...validFallbackNames];
       } catch (fallbackError) {
         console.warn('Fallback search failed, using category results only:', fallbackError);
       }
     }
+    
+    // Sort by relevance before processing
+    const queryLower = query.toLowerCase();
+    allMonsterNames.sort((a, b) => {
+      const aLower = a.toLowerCase();
+      const bLower = b.toLowerCase();
+      
+      // Exact matches first
+      if (aLower === queryLower && bLower !== queryLower) return -1;
+      if (bLower === queryLower && aLower !== queryLower) return 1;
+      
+      // Starts with query second
+      if (aLower.startsWith(queryLower) && !bLower.startsWith(queryLower)) return -1;
+      if (bLower.startsWith(queryLower) && !aLower.startsWith(queryLower)) return 1;
+      
+      // Shorter names for specificity
+      if (aLower.startsWith(queryLower) && bLower.startsWith(queryLower)) {
+        return a.length - b.length;
+      }
+      
+      return a.localeCompare(b);
+    });
     
     if (allMonsterNames.length === 0) {
       return { searchTerm: query, results: [] };
@@ -391,15 +432,63 @@ export async function searchMonsterNames(query: string, limit: number = 10): Pro
     if (categoryResults.length < 8) {
       try {
         const fallbackResults = await searchMonsterNamesFallback(query, limit * 2);
-        // Combine and deduplicate results, prioritizing category results
-        const uniqueNames = new Set([...categoryResults, ...fallbackResults]);
-        allResults = Array.from(uniqueNames);
+        
+        // Filter fallback results to only include potential monsters by checking for drop data
+        const validFallbackResults = [];
+        for (const title of fallbackResults) {
+          // Skip if we already have this from category search
+          if (categoryResults.includes(title)) continue;
+          
+          // Quick check if this might be a monster by looking for common non-monster patterns
+          const titleLower = title.toLowerCase();
+          const isLikelyNonMonster = 
+            titleLower.includes('quest') ||
+            titleLower.includes('diary') ||
+            titleLower.includes('achievement') ||
+            titleLower.includes('minigame') ||
+            titleLower.includes('activity') ||
+            titleLower.includes('guide') ||
+            titleLower.includes('music') ||
+            titleLower.includes('soundtrack') ||
+            titleLower.includes('chathead') ||
+            titleLower.includes('examine') ||
+            titleLower.includes('dialogue');
+          
+          if (!isLikelyNonMonster) {
+            validFallbackResults.push(title);
+          }
+        }
+        
+        allResults = [...categoryResults, ...validFallbackResults];
       } catch (fallbackError) {
         console.warn('Fallback name search failed:', fallbackError);
       }
     }
 
-    return allResults.slice(0, limit);
+    // Sort results by relevance - exact matches first, then by length, then alphabetically
+    const queryLower = query.toLowerCase();
+    const sortedResults = allResults.sort((a, b) => {
+      const aLower = a.toLowerCase();
+      const bLower = b.toLowerCase();
+      
+      // Exact matches first
+      if (aLower === queryLower && bLower !== queryLower) return -1;
+      if (bLower === queryLower && aLower !== queryLower) return 1;
+      
+      // Starts with query second
+      if (aLower.startsWith(queryLower) && !bLower.startsWith(queryLower)) return -1;
+      if (bLower.startsWith(queryLower) && !aLower.startsWith(queryLower)) return 1;
+      
+      // Shorter names (more specific) come before longer names
+      if (aLower.startsWith(queryLower) && bLower.startsWith(queryLower)) {
+        return a.length - b.length;
+      }
+      
+      // Finally, alphabetical order
+      return a.localeCompare(b);
+    });
+
+    return sortedResults.slice(0, limit);
   } catch (error) {
     console.error('Error searching monster names:', error);
     // Fallback to original opensearch method

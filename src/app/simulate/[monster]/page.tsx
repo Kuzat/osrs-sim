@@ -1,11 +1,17 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { type OSRSMonster, getMonsterDetails } from '@/lib/osrs-api';
-import { getCalculatorStructuredData } from '@/lib/structured-data';
 import { SimulationClient } from './simulation-client';
 
 interface Props {
   params: Promise<{ monster: string }>;
+}
+
+// Unified function for fetching monster data with consistent caching
+async function getMonsterData(monsterName: string): Promise<OSRSMonster | null> {
+  // Use direct API call for consistency between metadata and component
+  // Next.js will automatically cache this between the two calls
+  return await getMonsterDetails(monsterName);
 }
 
 // Generate metadata for each monster page
@@ -14,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const monsterName = decodeURIComponent(encodedMonsterName);
   
   try {
-    const monsterData = await getMonsterDetails(monsterName);
+    const monsterData = await getMonsterData(monsterName);
     
     if (!monsterData) {
       return {
@@ -72,42 +78,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-// Cache monster data for 1 hour (3600 seconds)
-async function getCachedMonsterData(monsterName: string): Promise<OSRSMonster | null> {
-  try {
-    // Using Next.js fetch with cache control
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/monsters/details`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name: monsterName }),
-      next: { 
-        revalidate: 3600 // Cache for 1 hour
-      }
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      return data.monster;
-    }
-  } catch (error) {
-    console.warn('API route failed, falling back to direct fetch:', error);
-  }
-
-  // Fallback to direct API call
-  return await getMonsterDetails(monsterName);
-}
-
 export default async function MonsterSimulatePage({ params }: Props) {
   const { monster: encodedMonsterName } = await params;
   const monsterName = decodeURIComponent(encodedMonsterName);
   
-  // Server-side data fetching with caching
+  // Server-side data fetching - Next.js will reuse the cached result from generateMetadata
   let monsterData: OSRSMonster | null = null;
   
   try {
-    monsterData = await getCachedMonsterData(monsterName);
+    monsterData = await getMonsterData(monsterName);
     
     if (!monsterData || monsterData.drops.length === 0) {
       notFound();
@@ -117,15 +96,8 @@ export default async function MonsterSimulatePage({ params }: Props) {
     notFound();
   }
 
-  // Generate structured data for SEO
-  const calculatorStructuredData = getCalculatorStructuredData(monsterData.title);
-
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(calculatorStructuredData) }}
-      />
       <SimulationClient 
         initialMonsterData={monsterData}
         encodedMonsterName={encodedMonsterName}

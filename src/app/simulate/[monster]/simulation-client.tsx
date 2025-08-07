@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ItemIcon } from "@/components/ui/item-icon";
 import { Tooltip } from "@/components/ui/tooltip";
 import { type OSRSMonster, type OSRSDrop } from "@/lib/osrs-api";
+import { getCalculatorStructuredData } from "@/lib/structured-data";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 interface SimulationResult {
@@ -46,6 +47,20 @@ export function SimulationClient({ initialMonsterData }: SimulationClientProps) 
       console.warn('Failed to store monster data in sessionStorage:', error);
     }
   }, [initialMonsterData]);
+
+  // Generate structured data on client side to avoid hydration issues
+  useEffect(() => {
+    const calculatorStructuredData = getCalculatorStructuredData(initialMonsterData.title);
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(calculatorStructuredData);
+    document.head.appendChild(script);
+
+    return () => {
+      // Cleanup on unmount
+      document.head.removeChild(script);
+    };
+  }, [initialMonsterData.title]);
 
   const parseDropRate = (rarity: string): number => {
     if (rarity.toLowerCase() === 'always' || rarity === '100%') {

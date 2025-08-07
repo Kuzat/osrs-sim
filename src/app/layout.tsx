@@ -13,10 +13,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "OSRS Monster LootSim",
-  description: "Search Old School RuneScape monsters and simulate their drop tables. View detailed loot statistics and probabilities with accurate OSRS drop mechanics.",
-  keywords: ["OSRS", "Old School RuneScape", "loot simulator", "drop table", "monster drops", "RuneScape calculator"],
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+  title: "OSRS Loot Simulator - Monster Drop Calculator & Drop Table Tool",
+  description: "Free OSRS loot simulator for Old School RuneScape. Calculate monster drop rates, simulate loot tables, and analyze drop probabilities with accurate game mechanics. Search 1000+ monsters instantly.",
+  keywords: ["OSRS loot simulator", "Old School RuneScape drop calculator", "OSRS monster drops", "RuneScape loot sim", "drop table calculator", "OSRS probability calculator", "monster drop rates", "OSRS wiki drops"],
   authors: [{ name: "OSRS Monster LootSim" }],
   creator: "OSRS Monster LootSim",
   publisher: "OSRS Monster LootSim",
@@ -30,8 +31,8 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: "OSRS Monster LootSim",
-    description: "Search Old School RuneScape monsters and simulate their drop tables. View detailed loot statistics and probabilities with accurate OSRS drop mechanics.",
+    title: "OSRS Loot Simulator - Monster Drop Calculator",
+    description: "Free OSRS loot simulator for Old School RuneScape. Calculate monster drop rates, simulate loot tables, and analyze drop probabilities with accurate game mechanics.",
     url: 'https://osrs-loot-sim.vercel.app',
     siteName: 'OSRS Monster LootSim',
     locale: 'en_US',
@@ -39,8 +40,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: "OSRS Monster LootSim",
-    description: "Search Old School RuneScape monsters and simulate their drop tables. View detailed loot statistics and probabilities.",
+    title: "OSRS Loot Simulator - Monster Drop Calculator",
+    description: "Free OSRS loot simulator. Calculate monster drop rates and probabilities with accurate game mechanics.",
     creator: '@osrs_loot_sim',
   },
   robots: {
@@ -61,7 +62,8 @@ export const metadata: Metadata = {
     shortcut: '/favicon.svg',
   },
   manifest: '/manifest.json',
-};
+  };
+}
 
 export default function RootLayout({
   children,

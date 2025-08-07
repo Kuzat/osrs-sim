@@ -8,6 +8,8 @@ import { ItemIcon } from "@/components/ui/item-icon";
 import { CacheStatus } from "@/components/cache-status";
 import { searchItems, searchMonsterNames, type OSRSMonster, type OSRSDrop } from "@/lib/osrs-api";
 import { useDebounce } from "@/hooks/useDebounce";
+import { getWebsiteStructuredData, getGameStructuredData } from "@/lib/structured-data";
+import { FAQSection } from "@/components/faq-section";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -120,13 +122,36 @@ export default function Home() {
     }
   };
 
+  const websiteStructuredData = getWebsiteStructuredData();
+  const gameStructuredData = getGameStructuredData();
+
   return (
     <div className="min-h-screen p-8 w-full max-w-6xl md:mt-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(gameStructuredData) }}
+      />
       <header className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-4">OSRS Monster LootSim</h1>
-        <p className="text-lg text-muted-foreground">
-          Search and explore Old School RuneScape monster drop tables
+        <h1 className="text-4xl font-bold mb-4">OSRS Loot Simulator - Monster Drop Calculator</h1>
+        <p className="text-lg text-muted-foreground mb-6">
+          Free Old School RuneScape loot simulator with accurate drop mechanics
         </p>
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-base text-muted-foreground/80 mb-4">
+            Calculate monster drop rates, simulate loot tables, and analyze probabilities for 1000+ OSRS monsters. 
+            Get realistic drop simulation results up to 100,000 kills with accurate game mechanics.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 text-sm text-muted-foreground/70">
+            <span className="bg-muted px-2 py-1 rounded">Drop Rate Calculator</span>
+            <span className="bg-muted px-2 py-1 rounded">Loot Simulation</span>
+            <span className="bg-muted px-2 py-1 rounded">OSRS Wiki Integration</span>
+            <span className="bg-muted px-2 py-1 rounded">Probability Analysis</span>
+          </div>
+        </div>
       </header>
 
       <main className="space-y-8">
@@ -197,6 +222,8 @@ export default function Home() {
                             src={monster.image}
                             alt={monster.title}
                             className="w-16 h-16 rounded-lg object-cover border bg-muted/20"
+                            loading="lazy"
+                            decoding="async"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                             }}
@@ -311,6 +338,8 @@ export default function Home() {
             </CardContent>
           </Card>
         )}
+
+        <FAQSection />
       </main>
     </div>
   );

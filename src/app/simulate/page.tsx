@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { ItemIcon } from "@/components/ui/item-icon";
 import { Tooltip } from "@/components/ui/tooltip";
 import { type OSRSMonster, type OSRSDrop, getMonsterDetails } from "@/lib/osrs-api";
+import { getCalculatorStructuredData } from "@/lib/structured-data";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 interface SimulationResult {
   itemName: string;
@@ -33,6 +35,8 @@ function SimulateContent() {
   const [simulationResults, setSimulationResults] = useState<SimulationStats | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+
+  const calculatorStructuredData = monster ? getCalculatorStructuredData(monster.title) : getCalculatorStructuredData();
 
   useEffect(() => {
     const monsterName = searchParams.get('name');
@@ -272,7 +276,18 @@ function SimulateContent() {
 
   return (
     <div className="min-h-screen p-8 w-full max-w-6xl">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(calculatorStructuredData) }}
+      />
       <div className="mb-6">
+        <Breadcrumb 
+          items={[
+            { label: "Loot Simulator", href: "/" },
+            { label: monster?.title || "Monster Simulation", current: true }
+          ]}
+        />
+        
         <Button 
           variant="outline" 
           onClick={() => router.push('/')}
@@ -289,6 +304,8 @@ function SimulateContent() {
                 src={monster.image}
                 alt={monster.title}
                 className="w-16 h-16 rounded-lg object-cover border bg-muted/20"
+                loading="lazy"
+                decoding="async"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}

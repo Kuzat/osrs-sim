@@ -58,6 +58,8 @@ export function ItemIcon({
           "rounded border object-cover bg-muted/20",
           isLoading && "opacity-0"
         )}
+        loading="lazy"
+        decoding="async"
         onLoad={() => setIsLoading(false)}
         onError={() => {
           setHasError(true);

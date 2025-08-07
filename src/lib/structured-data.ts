@@ -45,7 +45,7 @@ export function getCalculatorStructuredData(monsterName?: string) {
       ? `Simulate ${monsterName} drops from Old School RuneScape. Calculate loot probabilities and drop rates with accurate OSRS mechanics.`
       : 'Calculate drop rates and simulate loot from Old School RuneScape monsters with accurate game mechanics.',
     url: monsterName 
-      ? `https://osrs-loot-sim.vercel.app/simulate?name=${encodeURIComponent(monsterName)}`
+      ? `https://osrs-loot-sim.vercel.app/simulate/${encodeURIComponent(monsterName)}`
       : 'https://osrs-loot-sim.vercel.app',
     applicationCategory: 'CalculatorApplication',
     operatingSystem: 'Web Browser',
@@ -62,7 +62,7 @@ export function getCalculatorStructuredData(monsterName?: string) {
       potentialAction: {
         '@type': 'CalculateAction',
         description: `Calculate ${monsterName} loot drops`,
-        target: `https://osrs-loot-sim.vercel.app/simulate?name=${encodeURIComponent(monsterName)}`,
+        target: `https://osrs-loot-sim.vercel.app/simulate/${encodeURIComponent(monsterName)}`,
       },
     };
   }

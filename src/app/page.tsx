@@ -244,14 +244,14 @@ export default function Home() {
                         variant="default" 
                         size="sm"
                         onClick={() => {
-                          // Store monster data in sessionStorage for the simulation page
+                          // Store monster data in sessionStorage for fallback compatibility
                           sessionStorage.setItem('simulationMonster', JSON.stringify({
                             title: monster.title,
                             drops: monster.drops,
                             combatLevel: monster.combatLevel,
                             hitpoints: monster.hitpoints
                           }));
-                          window.location.href = `/simulate?name=${encodeURIComponent(monster.title)}`;
+                          window.location.href = `/simulate/${encodeURIComponent(monster.title)}`;
                         }}
                       >
                         Simulate Drops

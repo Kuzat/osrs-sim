@@ -76,6 +76,7 @@ export function Autocomplete({
       }
       // If no selection, pass through to parent for search
       if (onKeyPress) {
+        setIsOpen(false);
         onKeyPress(e);
       }
     }

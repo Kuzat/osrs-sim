@@ -7,6 +7,7 @@ import { Autocomplete } from "@/components/ui/autocomplete";
 import { ItemIcon } from "@/components/ui/item-icon";
 import { CacheStatus } from "@/components/cache-status";
 import { searchItems, searchMonsterNames, type OSRSMonster, type OSRSDrop } from "@/lib/osrs-api";
+import { monsterCache } from "@/lib/monster-cache";
 import { useDebounce } from "@/hooks/useDebounce";
 import { getWebsiteStructuredData, getGameStructuredData } from "@/lib/structured-data";
 import { FAQSection } from "@/components/faq-section";
@@ -36,7 +37,18 @@ export default function Home() {
 
       setIsLoadingAutocomplete(true);
       try {
-        const names = await searchMonsterNames(debouncedSearchQuery, 8);
+        // Try cache first
+        const cacheResult = monsterCache.searchMonsterNames(debouncedSearchQuery, 8);
+        
+        let names: string[] = [];
+        
+        if (cacheResult.fromCache && cacheResult.results.length > 0) {
+          // Use cached results
+          names = cacheResult.results;
+        } else {
+          // Fall back to API search
+          names = await searchMonsterNames(debouncedSearchQuery, 8);
+        }
         
         // Always include the typed text as the first option if it doesn't exactly match any suggestion
         const suggestions = names.map(name => ({ value: name, label: name }));

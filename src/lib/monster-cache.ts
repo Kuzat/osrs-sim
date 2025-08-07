@@ -274,6 +274,79 @@ class MonsterCacheService {
   }
 
   /**
+   * Search monster names only from cache (for autocomplete)
+   */
+  public searchMonsterNames(query: string, limit: number = 10): { results: string[], fromCache: boolean } {
+    if (!query.trim()) {
+      return { results: [], fromCache: true };
+    }
+
+    // Clean expired entries first
+    this.cleanExpiredEntries();
+
+    const queryLower = query.toLowerCase();
+    const matchScores = new Map<string, number>();
+    const potentialMatches = new Set<string>();
+    
+    // Search through cached, non-expired entries
+    for (const [keyword, titleSet] of this.searchIndex.entries()) {
+      // Exact matches
+      if (keyword === queryLower) {
+        for (const title of titleSet) {
+          const entry = this.cache.get(title);
+          if (entry && !this.isExpired(entry)) {
+            potentialMatches.add(title);
+            matchScores.set(title, (matchScores.get(title) || 0) + 100);
+          }
+        }
+      }
+      
+      // Prefix matches
+      else if (keyword.startsWith(queryLower)) {
+        for (const title of titleSet) {
+          const entry = this.cache.get(title);
+          if (entry && !this.isExpired(entry)) {
+            potentialMatches.add(title);
+            const score = matchScores.get(title) || 0;
+            matchScores.set(title, score + (keyword.length === queryLower.length ? 50 : 25));
+          }
+        }
+      }
+      
+      // Contains matches (if we need more results)
+      else if (potentialMatches.size < limit * 2 && keyword.includes(queryLower)) {
+        for (const title of titleSet) {
+          const entry = this.cache.get(title);
+          if (entry && !this.isExpired(entry)) {
+            potentialMatches.add(title);
+            const score = matchScores.get(title) || 0;
+            matchScores.set(title, score + 10);
+          }
+        }
+      }
+    }
+
+    // Sort and limit results
+    const cachedResults = Array.from(potentialMatches)
+      .map(title => ({
+        title,
+        score: matchScores.get(title) || 0
+      }))
+      .sort((a, b) => {
+        if (a.score !== b.score) return b.score - a.score;
+        if (a.title.length !== b.title.length) return a.title.length - b.title.length;
+        return a.title.localeCompare(b.title);
+      })
+      .slice(0, limit)
+      .map(item => item.title);
+
+    return { 
+      results: cachedResults, 
+      fromCache: cachedResults.length > 0 
+    };
+  }
+
+  /**
    * Search monsters by query string with cache-miss handling
    */
   public async searchMonsters(query: string, limit: number = 10): Promise<{ results: MonsterCacheEntry[], fromCache: boolean }> {

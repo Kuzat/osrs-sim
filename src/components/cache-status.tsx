@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { useDebug } from '@/contexts/debug-context';
 
 interface CacheStatus {
   health: {
@@ -18,11 +19,16 @@ interface CacheStatus {
 }
 
 export function CacheStatus() {
+  const { showCacheDebug } = useDebug();
   const [status, setStatus] = useState<CacheStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Only fetch if debug mode is on
+    if (!showCacheDebug) {
+      return;
+    }
     const fetchStatus = async () => {
       try {
         const response = await fetch('/api/monsters/status');
@@ -40,7 +46,12 @@ export function CacheStatus() {
     };
 
     fetchStatus();
-  }, []);
+  }, [showCacheDebug]);
+
+  // If debug mode is off, don't render anything
+  if (!showCacheDebug) {
+    return null;
+  }
 
   if (error || !status) {
     return null; // Hide if cache status is unavailable

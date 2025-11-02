@@ -22,5 +22,5 @@ services:
         traefik.docker.network: "dokploy-network"
         traefik.http.routers.osrs-sim.rule: "Host(`osrs.monster`)"
         traefik.http.routers.osrs-sim.entrypoints: "websecure"
-        traefik.http.routers.osrs-sim.certresolver: "le"
+        traefik.http.routers.osrs-sim.tls.certresolver: "le"
         traefik.http.services.osrs-sim.loadbalancer.server.port: "3000"

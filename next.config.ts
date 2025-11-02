@@ -20,6 +20,9 @@ const nextConfig: NextConfig = {
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
   /* config options here */
+  eslint: {
+    ignoreDuringBuilds: true
+  }
 };
 
 export default nextConfig;

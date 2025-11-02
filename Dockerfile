@@ -12,7 +12,7 @@ RUN npm ci
 
 # 3) Build the Next.js application
 FROM base AS builder
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Optional: build any data/cache your app needs before `next build`
